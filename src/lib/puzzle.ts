@@ -3,25 +3,21 @@ import { findMinLinePath } from './pathfind'
 import { dateKeyUTC, hashString, mulberry32 } from './rng'
 import type { Puzzle } from './types'
 
-const MIN_LINES = 2
-const MAX_LINES = 4
-const MIN_HOPS = 4
+/** Match classic Subwaydle: always 3 trains / 2 transfers */
+const REQUIRED_LINES = 3
+const MIN_HOPS = 6
 
 function isInteresting(puzzle: Puzzle): boolean {
-  const n = puzzle.solution.length
-  if (n < MIN_LINES || n > MAX_LINES) return false
+  if (puzzle.solution.length !== REQUIRED_LINES) return false
   if (puzzle.pathStationIds.length < MIN_HOPS) return false
-  // Avoid duplicate consecutive lines (shouldn't happen)
   for (let i = 1; i < puzzle.solution.length; i++) {
     if (puzzle.solution[i] === puzzle.solution[i - 1]) return false
   }
   const origin = getStation(puzzle.originId)
   const dest = getStation(puzzle.destinationId)
   if (!origin || !dest) return false
-  // Prefer distinct boroughs roughly by longitude/latitude spread
-  const dist =
-    Math.hypot(origin.lat - dest.lat, origin.lon - dest.lon)
-  return dist > 0.04
+  const dist = Math.hypot(origin.lat - dest.lat, origin.lon - dest.lon)
+  return dist > 0.05
 }
 
 export function getDailyPuzzle(date = new Date()): Puzzle {
@@ -48,18 +44,18 @@ export function getDailyPuzzle(date = new Date()): Puzzle {
     if (isInteresting(puzzle)) return puzzle
   }
 
-  // Fallback: fixed well-known route if seed search fails
-  const fallbackPath = findMinLinePath('127', 'D20') // Times Sq-42 St → Brighton Beach area-ish
-  // Try a few famous pairs
+  // Fallback pairs that typically need 3 lines
   const fallbacks: Array<[string, string]> = [
-    ['127', 'A32'], // Times Sq → W 4 St
-    ['132', 'R31'], // 14 St-Union Sq → Atlantic Av-Barclays
-    ['A27', 'G22'], // 42 St-Port Authority → Court Sq
-    ['235', '718'], // Brooklyn → Queens attempt
+    ['A41', 'G08'], // Jay St-MetroTech-ish → Elmhurst area attempt
+    ['A40', 'G14'],
+    ['132', 'G08'],
+    ['R31', '718'],
+    ['A27', 'D43'],
+    ['235', 'F01'],
   ]
   for (const [o, d] of fallbacks) {
     const path = findMinLinePath(o, d)
-    if (path && path.lines.length >= 2) {
+    if (path && path.lines.length === REQUIRED_LINES) {
       return {
         dateKey: key,
         originId: o,
@@ -70,11 +66,29 @@ export function getDailyPuzzle(date = new Date()): Puzzle {
     }
   }
 
+  // Extra seeded attempts with looser distance filter already exhausted above;
+  // keep last resort cheap.
+  for (let attempt = 0; attempt < 800; attempt++) {
+    const a = stations[Math.floor(rng() * stations.length)]!
+    const b = stations[Math.floor(rng() * stations.length)]!
+    if (a.id === b.id) continue
+    const path = findMinLinePath(a.id, b.id)
+    if (path && path.lines.length === REQUIRED_LINES) {
+      return {
+        dateKey: key,
+        originId: a.id,
+        destinationId: b.id,
+        solution: path.lines,
+        pathStationIds: path.stations,
+      }
+    }
+  }
+
   return {
     dateKey: key,
     originId: stations[0]!.id,
-    destinationId: stations[1]!.id,
-    solution: fallbackPath?.lines ?? ['1', '2'],
-    pathStationIds: fallbackPath?.stations ?? [stations[0]!.id, stations[1]!.id],
+    destinationId: stations[Math.min(20, stations.length - 1)]!.id,
+    solution: ['A', 'L', '1'],
+    pathStationIds: [stations[0]!.id, stations[1]!.id],
   }
 }

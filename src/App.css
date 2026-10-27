@@ -172,21 +172,22 @@
 }
 
 .tile {
-  /* Fallback without container queries, then refine when board has size */
-  --tile: min(52px, 13vw, calc((100dvh - 18.5rem) / 6));
+  /* Soft round cells (less Wordle-square); classic Subwaydle is 3-wide */
+  --tile: min(58px, 15vw, calc((100dvh - 18.5rem) / 6));
   width: var(--tile);
   height: var(--tile);
   border: 2px solid var(--stroke);
   background: var(--tile-bg);
   display: grid;
   place-items: center;
+  border-radius: 999px;
 }
 
 @supports (width: 1cqh) {
   .tile {
     --tile: min(
-      56px,
-      18cqw,
+      58px,
+      20cqw,
       calc((100cqh - 5 * clamp(3px, 0.7vh, 5px)) / 6)
     );
   }
@@ -327,7 +328,7 @@
 .key-action {
   min-width: clamp(3.8rem, 18vw, 4.8rem);
   height: clamp(1.85rem, 4.6vh, 2.3rem);
-  border-radius: 4px;
+  border-radius: 999px;
   background: var(--key-bg);
   color: #fff;
   font-family: var(--font-body);
@@ -434,7 +435,7 @@
 .swatch {
   width: 1.35rem;
   height: 1.35rem;
-  border-radius: 3px;
+  border-radius: 999px;
   flex: 0 0 auto;
   margin-top: 0.1rem;
 }
