@@ -79,18 +79,19 @@
 /* —— Top bar —— */
 .topbar {
   flex: 0 0 auto;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  position: relative;
+  display: flex;
   align-items: center;
-  gap: 0.35rem;
+  justify-content: space-between;
+  gap: 0.5rem;
   padding: 0.35rem 0.65rem;
   border-bottom: 1px solid var(--stroke);
   min-height: 48px;
 }
 
 .topbar-left {
-  justify-self: start;
   min-width: 0;
+  z-index: 1;
 }
 
 .auth-chip {
@@ -149,6 +150,10 @@
 }
 
 .brand-title {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
   margin: 0;
   font-family: var(--font-display);
   font-weight: 700;
@@ -156,13 +161,16 @@
   letter-spacing: -0.01em;
   text-align: center;
   line-height: 1;
+  pointer-events: none;
+  z-index: 0;
 }
 
 .topbar-actions {
   display: flex;
   align-items: center;
-  gap: 0.2rem;
-  justify-self: end;
+  gap: 0.15rem;
+  z-index: 1;
+  flex: 0 0 auto;
 }
 
 .icon-btn {
@@ -219,10 +227,16 @@
   margin-bottom: 0.45rem;
 }
 
+.trip-toolbar-start,
 .trip-toolbar-actions {
   display: flex;
   align-items: center;
   gap: 0.35rem;
+  min-width: 0;
+}
+
+.route-chip--icon {
+  padding-inline: 0.5rem;
 }
 
 .streak-chip,

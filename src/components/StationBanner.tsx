@@ -1,6 +1,6 @@
 import { getStation } from '../lib/graph'
 import type { StationId } from '../lib/types'
-import { IconFlame, IconShuffle } from './Icons'
+import { IconFlame, IconHelp, IconShuffle } from './Icons'
 
 type Props = {
   originId: StationId
@@ -9,6 +9,7 @@ type Props = {
   streak: number
   isPractice: boolean
   onOpenStats: () => void
+  onOpenHelp: () => void
   onNewRoute: () => void
   onTodayRoute: () => void
 }
@@ -20,6 +21,7 @@ export function StationBanner({
   streak,
   isPractice,
   onOpenStats,
+  onOpenHelp,
   onNewRoute,
   onTodayRoute,
 }: Props) {
@@ -31,17 +33,29 @@ export function StationBanner({
   return (
     <div className="trip-prompt" aria-label={isPractice ? 'Practice trip' : "Today's trip"}>
       <div className="trip-toolbar">
-        <button
-          type="button"
-          className={`streak-chip${streak > 0 ? ' streak-chip--hot' : ''}`}
-          onClick={onOpenStats}
-          aria-label={`Win streak ${streak}`}
-          title="Win streak"
-        >
-          <IconFlame size={15} />
-          <span className="streak-chip-num">{streak}</span>
-          <span className="streak-chip-label">streak</span>
-        </button>
+        <div className="trip-toolbar-start">
+          <button
+            type="button"
+            className={`streak-chip${streak > 0 ? ' streak-chip--hot' : ''}`}
+            onClick={onOpenStats}
+            aria-label={`Win streak ${streak}`}
+            title="Win streak"
+          >
+            <IconFlame size={15} />
+            <span className="streak-chip-num">{streak}</span>
+            <span className="streak-chip-label">streak</span>
+          </button>
+          <button
+            type="button"
+            className="route-chip route-chip--icon"
+            onClick={onOpenHelp}
+            aria-label="How to play"
+            title="How to play"
+          >
+            <IconHelp size={15} />
+            Help
+          </button>
+        </div>
         <div className="trip-toolbar-actions">
           {isPractice && (
             <button type="button" className="route-chip" onClick={onTodayRoute}>

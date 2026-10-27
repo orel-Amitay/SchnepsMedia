@@ -5,7 +5,7 @@ import { Modal } from './components/Modal'
 import { StationBanner } from './components/StationBanner'
 import { LineBadge } from './components/LineBadge'
 import { SponsorBar } from './components/SponsorBar'
-import { IconHelp, IconReset, IconSettings, IconStats, IconTrophy } from './components/Icons'
+import { IconReset, IconSettings, IconStats, IconTrophy } from './components/Icons'
 import { isAdminEmail } from './lib/admin'
 import { trackEvent } from './lib/analytics'
 import {
@@ -383,9 +383,6 @@ export default function App() {
         </div>
         <h1 className="brand-title">Transfer</h1>
         <div className="topbar-actions">
-          <button type="button" className="icon-btn" onClick={() => setHelpOpen(true)} aria-label="How to play">
-            <IconHelp />
-          </button>
           <button type="button" className="icon-btn" onClick={() => setBoardOpen(true)} aria-label="Leaderboard">
             <IconTrophy />
           </button>
@@ -415,6 +412,7 @@ export default function App() {
           streak={stats.currentStreak}
           isPractice={isPractice}
           onOpenStats={() => setStatsOpen(true)}
+          onOpenHelp={() => setHelpOpen(true)}
           onNewRoute={newRoute}
           onTodayRoute={todaysRoute}
         />
