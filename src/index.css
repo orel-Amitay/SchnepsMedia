@@ -1,0 +1,45 @@
+:root {
+  --ink: #f2f4f7;
+  --muted: #9aa3b2;
+  --stroke: rgba(255, 255, 255, 0.12);
+  --accent: #6ec1ff;
+  --font-display: 'Archivo', 'Arial Narrow', sans-serif;
+  --font-body: 'IBM Plex Sans', 'Segoe UI', sans-serif;
+  color-scheme: dark;
+  font-family: var(--font-body);
+  line-height: 1.45;
+  font-weight: 400;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  min-height: 100%;
+}
+
+body {
+  min-width: 320px;
+  background: #101419;
+  color: var(--ink);
+}
+
+button,
+input {
+  font: inherit;
+}
+
+strong {
+  color: #fff;
+  font-weight: 650;
+}
