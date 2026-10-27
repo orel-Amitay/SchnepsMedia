@@ -150,14 +150,73 @@
   flex: 0 0 auto;
   margin: 0;
   text-align: center;
-  font-size: clamp(0.8rem, 2.9vw, 0.95rem);
-  color: var(--ink);
-  line-height: 1.2;
   padding: 0;
 }
 
-.trip-prompt strong {
+.trip-route-card {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: stretch;
+  gap: 0.35rem;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.03));
+  border: 1px solid var(--stroke);
+  border-radius: 14px;
+  padding: 0.4rem 0.45rem;
+}
+
+:root[data-theme='light'] .trip-route-card {
+  background: linear-gradient(180deg, #f3f5f8, #eef1f5);
+}
+
+.trip-stop {
+  min-width: 0;
+  text-align: left;
+  background: rgba(225, 6, 0, 0.12);
+  border: 1px solid rgba(225, 6, 0, 0.35);
+  border-radius: 10px;
+  padding: 0.35rem 0.45rem;
+}
+
+.trip-stop--to {
+  text-align: right;
+  background: rgba(0, 98, 207, 0.14);
+  border-color: rgba(110, 193, 255, 0.4);
+}
+
+.trip-stop-label {
+  display: block;
+  font-size: 0.62rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 0.12rem;
+}
+
+.trip-stop-name {
+  display: block;
+  font-family: var(--font-display);
+  font-size: clamp(0.78rem, 2.8vw, 0.95rem);
   font-weight: 700;
+  line-height: 1.15;
+  color: var(--ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.trip-arrow {
+  align-self: center;
+  color: #e10600;
+  font-size: 1.05rem;
+  font-weight: 700;
+  padding: 0 0.1rem;
+}
+
+.trip-transfers {
+  margin: 0.28rem 0 0;
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  color: var(--muted);
 }
 
 .board {
@@ -184,7 +243,7 @@
 
 .tile {
   /* Slightly smaller than max fill — keeps room for chrome + keyboard */
-  --tile: min(62px, 17vw, calc((100dvh - 14.5rem) / 6));
+  --tile: min(60px, 16.5vw, calc((100dvh - 15.5rem) / 6));
   width: var(--tile);
   height: var(--tile);
   border: 2px solid var(--stroke);

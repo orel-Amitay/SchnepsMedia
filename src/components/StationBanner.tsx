@@ -14,9 +14,21 @@ export function StationBanner({ originId, destinationId, transfers }: Props) {
     transfers === 1 ? '1 transfer' : `${transfers} transfers`
 
   return (
-    <p className="trip-prompt">
-      Travel from <strong>{origin?.name ?? originId}</strong> to{' '}
-      <strong>{destination?.name ?? destinationId}</strong> using {transferLabel}.
-    </p>
+    <div className="trip-prompt" aria-label="Today's trip">
+      <div className="trip-route-card">
+        <div className="trip-stop">
+          <span className="trip-stop-label">From</span>
+          <span className="trip-stop-name">{origin?.name ?? originId}</span>
+        </div>
+        <span className="trip-arrow" aria-hidden="true">
+          →
+        </span>
+        <div className="trip-stop trip-stop--to">
+          <span className="trip-stop-label">To</span>
+          <span className="trip-stop-name">{destination?.name ?? destinationId}</span>
+        </div>
+      </div>
+      <p className="trip-transfers">using {transferLabel}</p>
+    </div>
   )
 }
