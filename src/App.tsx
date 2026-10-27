@@ -319,16 +319,21 @@ export default function App() {
     showToast(`Playing as ${p.displayName}`)
   }
 
-  function handlePassword() {
+  async function handlePassword() {
+    setAuthBusy(true)
     try {
-      const p = signInWithPassword(password, guestName || 'Schneps Admin')
+      const p = await signInWithPassword(password, guestName || 'Schneps Admin')
       setPlayer(p)
       setAuthOpen(false)
       setPassword('')
       trackEvent('sign_in', p, { method: 'password' })
       showToast(`Hi, ${p.displayName.split(' ')[0]}`)
-    } catch {
-      showToast('Wrong password')
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : ''
+      if (msg === 'WRONG_PASSWORD') showToast('Wrong password')
+      else showToast(msg || 'Password sign-in failed')
+    } finally {
+      setAuthBusy(false)
     }
   }
 
@@ -544,8 +549,8 @@ export default function App() {
           onChange={(e) => setGuestName(e.target.value)}
           maxLength={24}
         />
-        <button type="button" className="share-btn" onClick={handlePassword}>
-          Sign in with password
+        <button type="button" className="share-btn" onClick={() => void handlePassword()} disabled={authBusy}>
+          {authBusy ? 'Signing in…' : 'Sign in with password'}
         </button>
         <p className="help-note">
           By signing in you agree to our{' '}

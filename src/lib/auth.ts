@@ -2,6 +2,7 @@ import {
   GoogleAuthProvider,
   getRedirectResult,
   onAuthStateChanged,
+  signInWithEmailAndPassword,
   signInWithRedirect,
   signOut as firebaseSignOut,
   type User,
@@ -22,6 +23,13 @@ const SESSION_KEY = 'transfer-nyc:guest-player'
 export const LOGIN_PASSWORD =
   (import.meta.env.VITE_LOGIN_PASSWORD as string | undefined)?.trim() || 'TransferSchneps26'
 
+/** First admin email — used for Firebase Email/Password admin sign-in. */
+export const ADMIN_EMAIL =
+  ((import.meta.env.VITE_ADMIN_EMAILS as string | undefined) ?? 'orelamitay8@gmail.com')
+    .split(',')[0]
+    ?.trim()
+    .toLowerCase() || 'orelamitay8@gmail.com'
+
 function sessionFromStorage(): Player | null {
   try {
     const raw = localStorage.getItem(SESSION_KEY)
@@ -41,12 +49,13 @@ function saveSession(player: Player | null) {
 }
 
 function fromFirebaseUser(user: User): Player {
+  const isPassword = user.providerData.some((p) => p.providerId === 'password')
   return {
     uid: user.uid,
     displayName: user.displayName || user.email || 'Rider',
     photoURL: user.photoURL,
     email: user.email,
-    provider: 'google',
+    provider: isPassword ? 'password' : 'google',
   }
 }
 
@@ -78,13 +87,16 @@ function authErrorMessage(err: unknown): string {
     return 'Domain not authorized in Firebase (add schnepsmedia.vercel.app)'
   }
   if (code === 'auth/operation-not-allowed') {
-    return 'Google provider is disabled in Firebase Auth'
+    return 'Enable Email/Password in Firebase Authentication'
+  }
+  if (code === 'auth/user-not-found' || code === 'auth/invalid-credential' || code === 'auth/wrong-password') {
+    return 'Create admin user in Firebase Auth (Email/Password) with this password'
   }
   if (code === 'auth/api-key-not-valid' || /API key not valid/i.test(message)) {
     return 'Firebase API key invalid — fix key in Google Cloud / Firebase settings'
   }
-  if (code) return `Google sign-in failed (${code})`
-  return message || 'Google sign-in failed'
+  if (code) return `Sign-in failed (${code})`
+  return message || 'Sign-in failed'
 }
 
 export async function completeGoogleRedirect(): Promise<Player | null> {
@@ -118,19 +130,33 @@ export async function signInWithGoogle(): Promise<Player> {
   }
 }
 
-export function signInWithPassword(password: string, displayName = 'Schneps Admin'): Player {
+/**
+ * Admin/password login via Firebase Email+Password so Firestore admin rules work
+ * and you can read everyone's analytics events.
+ */
+export async function signInWithPassword(
+  password: string,
+  displayName = 'Schneps Admin',
+): Promise<Player> {
   if (password.trim() !== LOGIN_PASSWORD) {
     throw new Error('WRONG_PASSWORD')
   }
-  const player: Player = {
-    uid: `password-${hashName(LOGIN_PASSWORD)}`,
-    displayName: displayName.trim() || 'Schneps Admin',
-    photoURL: null,
-    email: 'password@transfer.local',
-    provider: 'password',
+
+  const auth = getFirebaseAuth()
+  if (!auth || !firebaseConfigured) {
+    throw new Error('GOOGLE_NOT_CONFIGURED')
   }
-  saveSession(player)
-  return player
+
+  try {
+    const cred = await signInWithEmailAndPassword(auth, ADMIN_EMAIL, password.trim())
+    const player = fromFirebaseUser(cred.user)
+    if (displayName.trim() && displayName.trim() !== player.displayName) {
+      return { ...player, displayName: displayName.trim(), provider: 'password' }
+    }
+    return { ...player, provider: 'password' }
+  } catch (err) {
+    throw new Error(authErrorMessage(err))
+  }
 }
 
 /** Local fallback so the UI is playable before Firebase keys are added. */

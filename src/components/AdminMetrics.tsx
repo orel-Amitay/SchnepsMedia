@@ -28,6 +28,7 @@ export function AdminMetrics() {
   const [error, setError] = useState<string | null>(null)
   const [snap, setSnap] = useState<MetricsSnapshot | null>(null)
   const [loading, setLoading] = useState(false)
+  const [busy, setBusy] = useState(false)
 
   const admin = isAdminPlayer(player)
 
@@ -54,14 +55,18 @@ export function AdminMetrics() {
     return () => window.clearInterval(id)
   }, [admin])
 
-  function handlePassword() {
+  async function handlePassword() {
     setError(null)
+    setBusy(true)
     try {
-      const p = signInWithPassword(password)
+      const p = await signInWithPassword(password)
       setPlayer(p)
       setPassword('')
-    } catch {
-      setError('Wrong password')
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : ''
+      setError(msg === 'WRONG_PASSWORD' ? 'Wrong password' : msg || 'Sign-in failed')
+    } finally {
+      setBusy(false)
     }
   }
 
@@ -99,8 +104,13 @@ export function AdminMetrics() {
             }}
             autoComplete="current-password"
           />
-          <button type="button" className="admin-btn admin-btn--primary" onClick={handlePassword}>
-            Sign in
+          <button
+            type="button"
+            className="admin-btn admin-btn--primary"
+            onClick={() => void handlePassword()}
+            disabled={busy}
+          >
+            {busy ? 'Signing in…' : 'Sign in'}
           </button>
           {error && <p className="admin-error">{error}</p>}
         </section>

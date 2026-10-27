@@ -12,7 +12,7 @@ service cloud.firestore {
         && request.auth.uid == request.resource.data.uid;
     }
 
-    // Analytics events: anyone can write, only admins can read
+    // Analytics: everyone is tracked (create), only you can read the dashboard
     match /events/{docId} {
       allow create: if true;
       allow read: if isAdmin();
