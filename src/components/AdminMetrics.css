@@ -1,0 +1,229 @@
+.admin-app {
+  min-height: 100dvh;
+  max-width: 980px;
+  margin: 0 auto;
+  padding: 1.25rem 1rem 3rem;
+  color: var(--ink);
+  background: transparent;
+  overflow: auto;
+  max-height: 100dvh;
+}
+
+.admin-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+
+.admin-kicker {
+  margin: 0 0 0.25rem;
+  font-size: 0.72rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--schneps-red);
+  font-weight: 700;
+}
+
+.admin-header h1 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: clamp(1.5rem, 4vw, 2rem);
+  letter-spacing: -0.02em;
+}
+
+.admin-header-actions {
+  display: flex;
+  gap: 0.45rem;
+  align-items: center;
+}
+
+.admin-link {
+  color: var(--ink);
+  text-decoration: none;
+  font-size: 0.88rem;
+  font-weight: 600;
+  border: 1px solid var(--stroke);
+  border-radius: 10px;
+  padding: 0.45rem 0.7rem;
+}
+
+.admin-btn {
+  border: 1px solid var(--stroke-strong);
+  background: transparent;
+  color: var(--ink);
+  border-radius: 10px;
+  padding: 0.45rem 0.75rem;
+  font-weight: 650;
+  font-size: 0.86rem;
+  cursor: pointer;
+}
+
+.admin-btn--primary {
+  background: var(--schneps-red);
+  border-color: var(--schneps-red);
+  color: #fff;
+  margin-top: 0.75rem;
+}
+
+.admin-card {
+  background: var(--panel-elevated);
+  border: 1px solid var(--stroke);
+  border-radius: 14px;
+  padding: 1rem 1.1rem;
+  margin-bottom: 1rem;
+}
+
+.admin-card h2,
+.admin-card h3 {
+  margin: 0 0 0.65rem;
+  font-family: var(--font-display);
+}
+
+.admin-section-title {
+  margin: 1.25rem 0 0.65rem;
+  font-family: var(--font-display);
+  font-size: 1rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.admin-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.admin-muted {
+  color: var(--muted);
+  font-size: 0.86rem;
+}
+
+.admin-error {
+  color: #ff8a84;
+  font-weight: 600;
+}
+
+.admin-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 0.65rem;
+  margin-bottom: 0.5rem;
+}
+
+.admin-stat {
+  background: var(--panel-elevated);
+  border: 1px solid var(--stroke);
+  border-radius: 12px;
+  padding: 0.75rem 0.8rem;
+}
+
+.admin-stat-value {
+  font-family: var(--font-display);
+  font-size: 1.45rem;
+  font-weight: 700;
+  line-height: 1.1;
+}
+
+.admin-stat-label {
+  margin-top: 0.25rem;
+  font-size: 0.72rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-weight: 650;
+}
+
+.admin-columns {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 0.75rem;
+}
+
+.admin-bars {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.admin-bar-row {
+  display: grid;
+  grid-template-columns: 1rem 1fr;
+  gap: 0.4rem;
+  align-items: center;
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.admin-bar-track {
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.admin-bar-fill {
+  background: var(--correct);
+  color: #fff;
+  font-size: 0.75rem;
+  padding: 0.15rem 0.35rem;
+  min-width: 1.4rem;
+  text-align: right;
+}
+
+.admin-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.35rem;
+}
+
+.admin-list li {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.35rem 0;
+  border-bottom: 1px solid var(--stroke);
+  font-size: 0.9rem;
+}
+
+.admin-table-wrap {
+  overflow: auto;
+}
+
+.admin-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+}
+
+.admin-table th,
+.admin-table td {
+  text-align: left;
+  padding: 0.4rem 0.35rem;
+  border-bottom: 1px solid var(--stroke);
+  vertical-align: top;
+}
+
+.admin-table th {
+  color: var(--muted);
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+body:has(.admin-app) {
+  overflow: auto;
+  max-height: none;
+}
+
+html:has(.admin-app),
+html:has(.admin-app) body,
+html:has(.admin-app) #root {
+  overflow: auto;
+  max-height: none;
+  height: auto;
+}

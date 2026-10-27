@@ -915,6 +915,12 @@
   margin-top: 0.85rem;
 }
 
+.settings-admin-link {
+  display: grid;
+  place-items: center;
+  text-decoration: none;
+}
+
 .google-btn {
   width: 100%;
   display: flex;

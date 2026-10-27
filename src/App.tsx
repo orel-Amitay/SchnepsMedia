@@ -6,6 +6,8 @@ import { StationBanner } from './components/StationBanner'
 import { LineBadge } from './components/LineBadge'
 import { SponsorBar } from './components/SponsorBar'
 import { IconHelp, IconReset, IconSettings, IconStats, IconTrophy } from './components/Icons'
+import { isAdminEmail } from './lib/admin'
+import { trackEvent } from './lib/analytics'
 import {
   completeGoogleRedirect,
   firebaseConfigured,
@@ -67,10 +69,15 @@ export default function App() {
   useEffect(() => watchAuth(setPlayer), [])
 
   useEffect(() => {
+    trackEvent('page_view', null, { path: window.location.pathname })
+  }, [])
+
+  useEffect(() => {
     void completeGoogleRedirect()
       .then((p) => {
         if (!p) return
         setPlayer(p)
+        trackEvent('sign_in', p, { method: 'google_redirect' })
         showToast(`Hi, ${p.displayName.split(' ')[0]}`)
       })
       .catch(() => {
@@ -113,6 +120,7 @@ export default function App() {
 
   useEffect(() => {
     if (!boardOpen) return
+    trackEvent('leaderboard_open', player)
     const dailyKey = getDailyPuzzle().dateKey
     void fetchLeaderboard(isPractice ? dailyKey : puzzle.dateKey).then(setLeaders)
   }, [boardOpen, puzzle.dateKey, gameStatus, player, isPractice])
@@ -164,6 +172,11 @@ export default function App() {
   function finishGame(next: 'won' | 'lost', guessCount: number) {
     setGameStatus(next)
     setStats(recordFinish({ dateKey: puzzle.dateKey, won: next === 'won', guesses: guessCount }))
+    trackEvent(next === 'won' ? 'game_win' : 'game_lose', player, {
+      guesses: guessCount,
+      practice: isPractice,
+      dateKey: puzzle.dateKey,
+    })
     void publishResult(next, guessCount, player)
     setStatsOpen(true)
   }
@@ -183,10 +196,12 @@ export default function App() {
 
   function newRoute() {
     practiceNonce.current += 1
+    trackEvent('new_route', player)
     switchPuzzle(getPracticePuzzle(Date.now() + practiceNonce.current), 'New route')
   }
 
   function todaysRoute() {
+    trackEvent('today_route', player)
     switchPuzzle(getDailyPuzzle(), "Today's route")
   }
 
@@ -254,6 +269,7 @@ export default function App() {
   /** Peek at the solution without ending / locking the game. */
   function revealAnswer() {
     setAnswerPeek(true)
+    trackEvent('peek_answer', player, { dateKey: puzzle.dateKey })
     showToast('Answer shown — you can keep playing')
   }
 
@@ -265,6 +281,7 @@ export default function App() {
     setGameStatus('playing')
     setAnswerPeek(false)
     setRevealRow(null)
+    trackEvent('reset', player, { dateKey: puzzle.dateKey })
     showToast('Board reset')
   }
 
@@ -274,6 +291,7 @@ export default function App() {
       const p = await signInWithGoogle()
       setPlayer(p)
       setAuthOpen(false)
+      trackEvent('sign_in', p, { method: 'google' })
       showToast(`Hi, ${p.displayName.split(' ')[0]}`)
     } catch (err) {
       const msg = err instanceof Error ? err.message : ''
@@ -295,10 +313,12 @@ export default function App() {
     const p = signInAsGuest(guestName)
     setPlayer(p)
     setAuthOpen(false)
+    trackEvent('sign_in', p, { method: 'guest' })
     showToast(`Playing as ${p.displayName}`)
   }
 
   async function handleSignOut() {
+    trackEvent('sign_out', player)
     await signOutPlayer()
     setPlayer(null)
     showToast('Signed out')
@@ -318,10 +338,12 @@ export default function App() {
         await navigator.clipboard.writeText(text)
         showToast('Copied results')
       }
+      trackEvent('share', player, { dateKey: puzzle.dateKey })
     } catch {
       try {
         await navigator.clipboard.writeText(text)
         showToast('Copied results')
+        trackEvent('share', player, { dateKey: puzzle.dateKey })
       } catch {
         showToast('Could not share')
       }
@@ -687,6 +709,11 @@ export default function App() {
           >
             Reset board
           </button>
+          {isAdminEmail(player?.email) && (
+            <a className="btn-ghost settings-admin-link" href="/admin">
+              Admin metrics →
+            </a>
+          )}
         </div>
       </Modal>
     </div>
