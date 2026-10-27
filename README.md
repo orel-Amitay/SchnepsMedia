@@ -1,7 +1,9 @@
 # Subwaydle NYC
 
-A daily NYC subway guessing game inspired by [Subwaydle](https://www.subwaydle.com/).  
-Guess the sequence of subway lines for a minimum-transfer trip between two stations. Original implementation — not affiliated with subwaydle.com or the MTA.
+Daily NYC subway guessing game **presented by [Schneps Media](https://www.schnepsmedia.com/)**.  
+Inspired by [Subwaydle](https://www.subwaydle.com/) — original implementation, not affiliated with subwaydle.com or the MTA.
+
+Classic structure: guess **3 trains / 2 transfers**, Wordle-style feedback (green / blue shared routing / yellow / gray), Google sign-in + daily leaderboard when Firebase is configured.
 
 ## Play locally
 
