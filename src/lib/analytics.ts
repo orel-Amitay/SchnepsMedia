@@ -22,7 +22,7 @@ export type AnalyticsEvent = {
   uid: string | null
   displayName: string | null
   email: string | null
-  provider: 'google' | 'guest' | 'anon'
+  provider: 'google' | 'guest' | 'password' | 'anon'
   meta: Record<string, string | number | boolean | null>
   createdAt: number
 }
