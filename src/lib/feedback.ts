@@ -2,7 +2,7 @@ import { sharesRouting } from './routeGroups'
 import type { LineId, TileStatus } from './types'
 
 /**
- * Feedback inspired by subwaydle.com:
+ * Feedback:
  * Green  — exact line in exact position
  * Blue   — guessed line shares routing with the correct line in that spot
  * Yellow — line appears in the solution elsewhere
@@ -75,5 +75,5 @@ export function buildShareText(opts: {
     .map((g) => scoreGuess(g, solution).map((s) => emoji[s]).join(''))
     .join('\n')
 
-  return `Subwaydle NYC ${dateKey} ${score}/${maxGuesses}\n${rows}`
+  return `Transfer ${dateKey} ${score}/${maxGuesses}\n${rows}`
 }

@@ -1,6 +1,6 @@
 import type { Settings } from './types'
 
-const KEY = 'subwaydle-nyc:settings'
+const KEY = 'transfer-nyc:settings'
 
 const defaults: Settings = {
   showStatusBadges: true,

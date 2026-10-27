@@ -15,7 +15,7 @@ export type Player = {
   provider: 'google' | 'guest'
 }
 
-const GUEST_KEY = 'subwaydle-nyc:guest-player'
+const GUEST_KEY = 'transfer-nyc:guest-player'
 
 function guestFromStorage(): Player | null {
   try {

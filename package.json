@@ -1,5 +1,5 @@
 {
-  "name": "subwaydle-nyc",
+  "name": "transfer-nyc",
   "private": true,
   "version": "1.0.0",
   "type": "module",
@@ -24,5 +24,5 @@
     "typescript": "~7.0.2",
     "vite": "^8.3.5"
   },
-  "description": "Daily NYC subway line guessing game"
+  "description": "Transfer — daily NYC subway line guessing game by Schneps Media"
 }

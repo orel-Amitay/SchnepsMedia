@@ -3,7 +3,7 @@ import { findMinLinePath } from './pathfind'
 import { dateKeyUTC, hashString, mulberry32 } from './rng'
 import type { Puzzle } from './types'
 
-/** Match classic Subwaydle: always 3 trains / 2 transfers */
+/** Daily format: always 3 trains / 2 transfers */
 const REQUIRED_LINES = 3
 const MIN_HOPS = 6
 
@@ -22,7 +22,7 @@ function isInteresting(puzzle: Puzzle): boolean {
 
 export function getDailyPuzzle(date = new Date()): Puzzle {
   const key = dateKeyUTC(date)
-  const rng = mulberry32(hashString(`subwaydle-nyc:${key}`))
+  const rng = mulberry32(hashString(`transfer-nyc:${key}`))
   const stations = getGraph().stations.filter((s) => s.lines.length > 0)
 
   // Deterministic search with date seed — try many pairs until interesting route found

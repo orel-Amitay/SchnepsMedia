@@ -1,6 +1,6 @@
 import type { Stats } from './types'
 
-const KEY = 'subwaydle-nyc:stats'
+const KEY = 'transfer-nyc:stats'
 
 const empty = (): Stats => ({
   played: 0,

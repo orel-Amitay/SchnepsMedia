@@ -5,6 +5,7 @@ import { Modal } from './components/Modal'
 import { StationBanner } from './components/StationBanner'
 import { LineBadge } from './components/LineBadge'
 import { SponsorBar } from './components/SponsorBar'
+import { IconHelp, IconReset, IconSettings, IconStats, IconTrophy } from './components/Icons'
 import {
   firebaseConfigured,
   signInAsGuest,
@@ -305,19 +306,28 @@ export default function App() {
             </span>
           </button>
         </div>
-        <h1 className="brand-title">Subwaydle</h1>
+        <h1 className="brand-title">Transfer</h1>
         <div className="topbar-actions">
           <button type="button" className="icon-btn" onClick={() => setHelpOpen(true)} aria-label="How to play">
-            ?
+            <IconHelp />
           </button>
           <button type="button" className="icon-btn" onClick={() => setBoardOpen(true)} aria-label="Leaderboard">
-            ♛
+            <IconTrophy />
           </button>
           <button type="button" className="icon-btn" onClick={() => setStatsOpen(true)} aria-label="Statistics">
-            ▮▮
+            <IconStats />
+          </button>
+          <button
+            type="button"
+            className="icon-btn"
+            onClick={resetGame}
+            aria-label="Reset board"
+            title="Reset board"
+          >
+            <IconReset />
           </button>
           <button type="button" className="icon-btn" onClick={() => setSettingsOpen(true)} aria-label="Settings">
-            ⚙
+            <IconSettings />
           </button>
         </div>
       </header>
@@ -368,7 +378,7 @@ export default function App() {
       {toast && <div className="toast">{toast}</div>}
 
       <Modal open={helpOpen} title="How to Play" onClose={() => setHelpOpen(false)}>
-        <p>Guess the SUBWAYDLE in 6 tries.</p>
+        <p>Guess today’s TRANSFER in 6 tries.</p>
         <p>
           Each guess must be a valid subway trip involving {length} train
           {length === 1 ? '' : 's'} using available transfers between them.
@@ -410,7 +420,7 @@ export default function App() {
             </span>
           </li>
         </ul>
-        <p className="help-note">Inspired by the Subwaydle concept — not affiliated with subwaydle.com or the MTA.</p>
+        <p className="help-note">A Schneps Media daily puzzle — not affiliated with the MTA or other subway games.</p>
       </Modal>
 
       <Modal open={authOpen} title="Sign in with Google" onClose={() => setAuthOpen(false)}>
@@ -551,12 +561,19 @@ export default function App() {
                 {player.provider === 'google' ? 'Signed in with Google' : 'Guest player'}
               </div>
             </div>
-            <button type="button" className="reveal-btn" onClick={handleSignOut}>
+            <button type="button" className="btn-ghost btn-compact" onClick={handleSignOut}>
               Sign out
             </button>
           </div>
         ) : (
-          <button type="button" className="google-btn" onClick={() => { setSettingsOpen(false); setAuthOpen(true) }}>
+          <button
+            type="button"
+            className="google-btn google-btn--compact"
+            onClick={() => {
+              setSettingsOpen(false)
+              setAuthOpen(true)
+            }}
+          >
             Sign in
           </button>
         )}
@@ -576,26 +593,28 @@ export default function App() {
             onChange={(e) => setSettings((s) => ({ ...s, darkMode: e.target.checked }))}
           />
         </label>
-        <button
-          type="button"
-          className="reveal-btn reveal-btn--modal"
-          onClick={() => {
-            revealAnswer()
-            setSettingsOpen(false)
-          }}
-        >
-          Show answer
-        </button>
-        <button
-          type="button"
-          className="share-btn"
-          onClick={() => {
-            resetGame()
-            setSettingsOpen(false)
-          }}
-        >
-          Play again / reset board
-        </button>
+        <div className="settings-actions">
+          <button
+            type="button"
+            className="btn-ghost"
+            onClick={() => {
+              revealAnswer()
+              setSettingsOpen(false)
+            }}
+          >
+            Show answer
+          </button>
+          <button
+            type="button"
+            className="btn-primary"
+            onClick={() => {
+              resetGame()
+              setSettingsOpen(false)
+            }}
+          >
+            Reset board
+          </button>
+        </div>
       </Modal>
     </div>
   )

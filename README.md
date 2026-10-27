@@ -1,7 +1,7 @@
-# Subwaydle NYC
+# Transfer
 
 Daily NYC subway guessing game **presented by [Schneps Media](https://www.schnepsmedia.com/)**.  
-Inspired by [Subwaydle](https://www.subwaydle.com/) — original implementation, not affiliated with subwaydle.com or the MTA.
+Original implementation — not affiliated with the MTA or other subway games.
 
 Classic structure: guess **3 trains / 2 transfers**, Wordle-style feedback (green / blue shared routing / yellow / gray), Google sign-in + daily leaderboard when Firebase is configured.
 
@@ -33,11 +33,11 @@ npm run preview  # serve the production build
 
 The app does **not** store a fixed answer key. For the UTC date it:
 
-1. Seeds a PRNG with `subwaydle-nyc:YYYY-MM-DD`
+1. Seeds a PRNG with `transfer-nyc:YYYY-MM-DD`
 2. Samples station pairs on the MTA GTFS graph
 3. Runs a minimum-transfer pathfinder and takes that line sequence as today’s solution
 
-For QA, open the app with `?debug` in the URL to reveal today’s lines (e.g. `http://localhost:5288/?debug`).
+For QA, open the app with `?debug` in the URL to reveal today’s lines.
 
 ## Data
 

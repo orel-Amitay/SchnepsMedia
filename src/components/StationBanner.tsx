@@ -15,7 +15,7 @@ export function StationBanner({ originId, destinationId, transfers }: Props) {
 
   return (
     <div className="trip-prompt" aria-label="Today's trip">
-      <div className="trip-route-card">
+      <div className="trip-route">
         <div className="trip-stop">
           <span className="trip-stop-label">From</span>
           <span className="trip-stop-name">{origin?.name ?? originId}</span>
@@ -28,7 +28,11 @@ export function StationBanner({ originId, destinationId, transfers }: Props) {
           <span className="trip-stop-name">{destination?.name ?? destinationId}</span>
         </div>
       </div>
-      <p className="trip-transfers">using {transferLabel}</p>
+      <p className="trip-transfers">
+        <span className="trip-transfers-rule" aria-hidden="true" />
+        <span>{transferLabel}</span>
+        <span className="trip-transfers-rule" aria-hidden="true" />
+      </p>
     </div>
   )
 }

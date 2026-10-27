@@ -22,7 +22,7 @@ export type LeaderboardEntry = {
   updatedAt: number
 }
 
-const LOCAL_KEY = 'subwaydle-nyc:leaderboard'
+const LOCAL_KEY = 'transfer-nyc:leaderboard'
 
 function scoreFor(won: boolean, guesses: number): number {
   if (!won) return 0

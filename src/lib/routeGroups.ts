@@ -2,7 +2,7 @@ import type { LineId } from './types'
 
 /**
  * Approximate NYC "shared routing" families for blue feedback.
- * Inspired by subwaydle.com: another train that often shares the same tracks/stops.
+ * Another train that often shares the same tracks/stops (shared-routing feedback).
  */
 const GROUPS: LineId[][] = [
   ['1', '2', '3'],

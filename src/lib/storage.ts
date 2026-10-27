@@ -1,6 +1,6 @@
 import type { LineId } from './types'
 
-const PREFIX = 'subwaydle-nyc:v3:'
+const PREFIX = 'transfer-nyc:v1:'
 
 export type DayState = {
   dateKey: string
