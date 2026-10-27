@@ -29,6 +29,7 @@ export function saveStats(stats: Stats): void {
   }
 }
 
+/** Record a finished puzzle. Same puzzle id only counts once. */
 export function recordFinish(opts: {
   dateKey: string
   won: boolean

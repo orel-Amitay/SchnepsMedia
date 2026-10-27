@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Board } from './components/Board'
 import { Keyboard } from './components/Keyboard'
 import { Modal } from './components/Modal'
@@ -20,20 +20,21 @@ import {
   submitScore,
   type LeaderboardEntry,
 } from './lib/leaderboard'
-import { getDailyPuzzle } from './lib/puzzle'
+import { getDailyPuzzle, getPracticePuzzle, isPracticePuzzle } from './lib/puzzle'
 import { loadSettings, saveSettings } from './lib/settings'
 import { loadStats, recordFinish } from './lib/stats'
 import { clearDay, loadDay, saveDay } from './lib/storage'
 import { isValidTrip } from './lib/validate'
-import type { LineId, Settings, Stats, TileStatus } from './lib/types'
+import type { LineId, Puzzle, Settings, Stats, TileStatus } from './lib/types'
 import './App.css'
 
 const MAX_GUESSES = 6
 
 export default function App() {
-  const puzzle = useMemo(() => getDailyPuzzle(), [])
+  const [puzzle, setPuzzle] = useState<Puzzle>(() => getDailyPuzzle())
   const length = puzzle.solution.length
   const transfers = Math.max(0, length - 1)
+  const isPractice = isPracticePuzzle(puzzle)
   const debug = useMemo(() => {
     if (typeof window === 'undefined') return false
     return new URLSearchParams(window.location.search).has('debug')
@@ -59,6 +60,8 @@ export default function App() {
   const [authBusy, setAuthBusy] = useState(false)
   const [leaders, setLeaders] = useState<LeaderboardEntry[]>([])
   const [answerPeek, setAnswerPeek] = useState(false)
+  const firstLoad = useRef(true)
+  const practiceNonce = useRef(0)
 
   useEffect(() => watchAuth(setPlayer), [])
 
@@ -68,10 +71,20 @@ export default function App() {
       setGuesses(saved.guesses)
       setStatuses(saved.guesses.map((g) => scoreGuess(g, puzzle.solution)))
       setGameStatus(saved.status)
-      if (saved.status !== 'playing') setStatsOpen(true)
+      setAnswerPeek(false)
+      setRevealRow(null)
+      setCurrent([])
+      if (saved.status !== 'playing' && firstLoad.current) setStatsOpen(true)
     } else {
-      setHelpOpen(true)
+      setGuesses([])
+      setStatuses([])
+      setCurrent([])
+      setGameStatus('playing')
+      setAnswerPeek(false)
+      setRevealRow(null)
+      if (firstLoad.current) setHelpOpen(true)
     }
+    firstLoad.current = false
     setHydrated(true)
   }, [puzzle])
 
@@ -87,8 +100,9 @@ export default function App() {
 
   useEffect(() => {
     if (!boardOpen) return
-    void fetchLeaderboard(puzzle.dateKey).then(setLeaders)
-  }, [boardOpen, puzzle.dateKey, gameStatus, player])
+    const dailyKey = getDailyPuzzle().dateKey
+    void fetchLeaderboard(isPractice ? dailyKey : puzzle.dateKey).then(setLeaders)
+  }, [boardOpen, puzzle.dateKey, gameStatus, player, isPractice])
 
   const keyHints = useMemo(() => {
     const hints: Record<string, TileStatus> = {}
@@ -121,7 +135,7 @@ export default function App() {
   }
 
   async function publishResult(next: 'won' | 'lost', guessCount: number, who: Player | null) {
-    if (!who) return
+    if (!who || isPractice) return
     try {
       await submitScore({
         player: who,
@@ -139,6 +153,28 @@ export default function App() {
     setStats(recordFinish({ dateKey: puzzle.dateKey, won: next === 'won', guesses: guessCount }))
     void publishResult(next, guessCount, player)
     setStatsOpen(true)
+  }
+
+  function switchPuzzle(next: Puzzle, toastMsg: string) {
+    setHydrated(false)
+    setPuzzle(next)
+    setGuesses([])
+    setStatuses([])
+    setCurrent([])
+    setGameStatus('playing')
+    setAnswerPeek(false)
+    setRevealRow(null)
+    setStatsOpen(false)
+    showToast(toastMsg)
+  }
+
+  function newRoute() {
+    practiceNonce.current += 1
+    switchPuzzle(getPracticePuzzle(Date.now() + practiceNonce.current), 'New route')
+  }
+
+  function todaysRoute() {
+    switchPuzzle(getDailyPuzzle(), "Today's route")
   }
 
   function onPick(line: LineId) {
@@ -337,6 +373,11 @@ export default function App() {
           originId={puzzle.originId}
           destinationId={puzzle.destinationId}
           transfers={transfers}
+          streak={stats.currentStreak}
+          isPractice={isPractice}
+          onOpenStats={() => setStatsOpen(true)}
+          onNewRoute={newRoute}
+          onTodayRoute={todaysRoute}
         />
 
         {(debug || answerPeek) && (
@@ -457,7 +498,7 @@ export default function App() {
       </Modal>
 
       <Modal open={boardOpen} title="Leaderboard" onClose={() => setBoardOpen(false)}>
-        <p className="board-date">Today · {puzzle.dateKey}</p>
+        <p className="board-date">Today · {getDailyPuzzle().dateKey}</p>
         {!player && (
           <button type="button" className="google-btn" onClick={() => { setBoardOpen(false); setAuthOpen(true) }}>
             Sign in to compete
@@ -498,13 +539,21 @@ export default function App() {
           </div>
           <div className="stat">
             <div className="stat-num">{stats.currentStreak}</div>
-            <div className="stat-label">Current Streak</div>
+            <div className="stat-label">Streak</div>
           </div>
           <div className="stat">
             <div className="stat-num">{stats.maxStreak}</div>
-            <div className="stat-label">Max Streak</div>
+            <div className="stat-label">Best</div>
           </div>
         </div>
+        <p className="help-note stats-streak-note">
+          Streak counts consecutive wins. Lose once and it resets. Use New route to keep going.
+        </p>
+        {gameStatus !== 'playing' && (
+          <button type="button" className="btn-primary stats-next-route" onClick={() => { setStatsOpen(false); newRoute() }}>
+            Next route
+          </button>
+        )}
         <h3 className="help-sub">Guess Distribution</h3>
         <div className="dist">
           {stats.guessDistribution.map((n, i) => (
