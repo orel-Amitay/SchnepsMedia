@@ -140,6 +140,16 @@ export default function App() {
     // Intentionally rebind when game inputs change
   })
 
+  function revealAnswer() {
+    if (gameStatus === 'won') {
+      setResultOpen(true)
+      return
+    }
+    setGameStatus('lost')
+    setCurrent([])
+    setResultOpen(true)
+  }
+
   async function share() {
     const text = buildShareText({
       dateKey: puzzle.dateKey,
@@ -181,7 +191,6 @@ export default function App() {
           className="icon-btn"
           onClick={() => setResultOpen(true)}
           aria-label="Results"
-          disabled={gameStatus === 'playing' && guesses.length === 0}
         >
           ≡
         </button>
@@ -223,6 +232,12 @@ export default function App() {
           keyHints={keyHints}
           disabled={gameStatus !== 'playing'}
         />
+
+        {gameStatus === 'playing' && (
+          <button type="button" className="reveal-btn" onClick={revealAnswer}>
+            Show answer
+          </button>
+        )}
       </main>
 
       {toast && <div className="toast">{toast}</div>}
@@ -258,7 +273,7 @@ export default function App() {
           {gameStatus === 'won'
             ? `Solved in ${guesses.length}/${MAX_GUESSES}.`
             : gameStatus === 'lost'
-              ? 'Out of guesses. The correct lines were:'
+              ? 'The correct lines were:'
               : `Guesses used: ${guesses.length}/${MAX_GUESSES}.`}
         </p>
         {(gameStatus === 'lost' || gameStatus === 'won') && (
@@ -267,6 +282,11 @@ export default function App() {
               <LineBadge key={`${line}-${i}`} line={line} size="md" />
             ))}
           </div>
+        )}
+        {gameStatus === 'playing' && (
+          <button type="button" className="reveal-btn reveal-btn--modal" onClick={revealAnswer}>
+            Show answer
+          </button>
         )}
         {gameStatus !== 'playing' && (
           <button type="button" className="share-btn" onClick={share}>

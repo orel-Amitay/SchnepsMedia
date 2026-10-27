@@ -470,6 +470,34 @@
   margin: 0.85rem 0 1rem;
 }
 
+.reveal-btn {
+  margin: 0.25rem auto 0;
+  display: block;
+  border: 1px solid var(--stroke);
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--muted);
+  border-radius: 999px;
+  padding: 0.55rem 1rem;
+  font-family: var(--font-body);
+  font-size: 0.82rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  transition: background 160ms ease, color 160ms ease;
+}
+
+.reveal-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--ink);
+}
+
+.reveal-btn--modal {
+  width: 100%;
+  margin: 0.5rem 0 0;
+  border-radius: 12px;
+  padding: 0.75rem 1rem;
+}
+
 .share-btn {
   width: 100%;
   border: none;
