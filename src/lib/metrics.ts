@@ -1,9 +1,27 @@
 import { collection, getDocs, limit, orderBy, query } from 'firebase/firestore'
 import type { AnalyticsEvent } from './analytics'
 import { fetchRecentEvents, loadLocalEvents } from './analytics'
+import type { DeviceKind } from './clientContext'
 import { getDb } from './firebase'
 import type { LeaderboardEntry } from './leaderboard'
 import { dateKeyUTC } from './rng'
+
+export type SessionRow = {
+  sessionId: string
+  uid: string | null
+  displayName: string | null
+  email: string | null
+  provider: string
+  device: DeviceKind | 'unknown'
+  viewport: string | null
+  firstAt: number
+  lastAt: number
+  durationSec: number
+  events: number
+  games: number
+  wins: number
+  pageViews: number
+}
 
 export type MetricsSnapshot = {
   generatedAt: number
@@ -20,6 +38,8 @@ export type MetricsSnapshot = {
     newRoutes: number
     shares: number
     uniquePlayers: number
+    sessions: number
+    avgSessionSec: number
   }
   today: {
     events: number
@@ -31,9 +51,13 @@ export type MetricsSnapshot = {
     winRate: number
     newRoutes: number
     uniquePlayers: number
+    sessions: number
+    avgSessionSec: number
   }
+  devices: { phone: number; tablet: number; desktop: number; unknown: number }
   guessDistribution: number[]
   topPlayers: Array<{ uid: string; name: string; wins: number; games: number }>
+  sessions: SessionRow[]
   recent: AnalyticsEvent[]
   leaderboardToday: LeaderboardEntry[]
 }
@@ -57,6 +81,93 @@ function withTimeout<T>(promise: Promise<T>, ms: number, fallback: T): Promise<T
   })
 }
 
+function eventDevice(e: AnalyticsEvent): DeviceKind | 'unknown' {
+  if (e.device === 'phone' || e.device === 'tablet' || e.device === 'desktop') return e.device
+  const d = e.meta.device
+  if (d === 'phone' || d === 'tablet' || d === 'desktop') return d
+  return 'unknown'
+}
+
+function eventSessionId(e: AnalyticsEvent): string {
+  if (e.sessionId && e.sessionId !== 'unknown') return e.sessionId
+  if (typeof e.meta.sessionId === 'string' && e.meta.sessionId) return e.meta.sessionId
+  return e.uid ? `uid_${e.uid}` : `anon_${e.createdAt}`
+}
+
+function buildSessions(events: AnalyticsEvent[]): SessionRow[] {
+  const map = new Map<
+    string,
+    {
+      row: SessionRow
+      reportedDuration: number
+    }
+  >()
+
+  // Oldest → newest so we pick up identity as it appears
+  const chronological = [...events].sort((a, b) => a.createdAt - b.createdAt)
+
+  for (const e of chronological) {
+    const id = eventSessionId(e)
+    const device = eventDevice(e)
+    const viewport = typeof e.meta.viewport === 'string' ? e.meta.viewport : null
+    const reported =
+      typeof e.meta.durationSec === 'number' && Number.isFinite(e.meta.durationSec)
+        ? e.meta.durationSec
+        : 0
+
+    let entry = map.get(id)
+    if (!entry) {
+      entry = {
+        reportedDuration: reported,
+        row: {
+          sessionId: id,
+          uid: e.uid,
+          displayName: e.displayName,
+          email: e.email,
+          provider: e.provider,
+          device,
+          viewport,
+          firstAt: e.createdAt,
+          lastAt: e.createdAt,
+          durationSec: 0,
+          events: 0,
+          games: 0,
+          wins: 0,
+          pageViews: 0,
+        },
+      }
+      map.set(id, entry)
+    }
+
+    const row = entry.row
+    row.events += 1
+    row.lastAt = Math.max(row.lastAt, e.createdAt)
+    row.firstAt = Math.min(row.firstAt, e.createdAt)
+    if (reported > entry.reportedDuration) entry.reportedDuration = reported
+    if (e.uid) row.uid = e.uid
+    if (e.displayName) row.displayName = e.displayName
+    if (e.email) row.email = e.email
+    if (e.provider && e.provider !== 'anon') row.provider = e.provider
+    if (device !== 'unknown') row.device = device
+    if (viewport) row.viewport = viewport
+    if (e.type === 'page_view') row.pageViews += 1
+    if (e.type === 'game_win') {
+      row.games += 1
+      row.wins += 1
+    }
+    if (e.type === 'game_lose') row.games += 1
+  }
+
+  const rows: SessionRow[] = []
+  for (const { row, reportedDuration } of map.values()) {
+    const spanSec = Math.max(0, Math.round((row.lastAt - row.firstAt) / 1000))
+    row.durationSec = Math.max(spanSec, reportedDuration)
+    rows.push(row)
+  }
+
+  return rows.sort((a, b) => b.lastAt - a.lastAt)
+}
+
 function aggregate(
   events: AnalyticsEvent[],
   todayKey: string,
@@ -72,6 +183,8 @@ function aggregate(
     newRoutes: 0,
     shares: 0,
     uniquePlayers: 0,
+    sessions: 0,
+    avgSessionSec: 0,
   }
   const today = {
     events: 0,
@@ -83,7 +196,10 @@ function aggregate(
     winRate: 0,
     newRoutes: 0,
     uniquePlayers: 0,
+    sessions: 0,
+    avgSessionSec: 0,
   }
+  const devices = { phone: 0, tablet: 0, desktop: 0, unknown: 0 }
   const guessDistribution = emptyDist()
   const players = new Map<string, { name: string; wins: number; games: number }>()
   const allUids = new Set<string>()
@@ -150,6 +266,22 @@ function aggregate(
     }
   }
 
+  const sessions = buildSessions(events)
+  for (const s of sessions) {
+    const bucket = s.device in devices ? s.device : 'unknown'
+    devices[bucket as keyof typeof devices] += 1
+  }
+
+  const todaySessions = sessions.filter((s) => dateKeyUTC(new Date(s.firstAt)) === todayKey)
+  totals.sessions = sessions.length
+  today.sessions = todaySessions.length
+  totals.avgSessionSec = sessions.length
+    ? Math.round(sessions.reduce((a, s) => a + s.durationSec, 0) / sessions.length)
+    : 0
+  today.avgSessionSec = todaySessions.length
+    ? Math.round(todaySessions.reduce((a, s) => a + s.durationSec, 0) / todaySessions.length)
+    : 0
+
   totals.winRate = totals.games ? Math.round((totals.wins / totals.games) * 100) : 0
   today.winRate = today.games ? Math.round((today.wins / today.games) * 100) : 0
   totals.uniquePlayers = allUids.size
@@ -160,7 +292,14 @@ function aggregate(
     .sort((a, b) => b.wins - a.wins || b.games - a.games)
     .slice(0, 10)
 
-  return { totals, today, guessDistribution, topPlayers }
+  return {
+    totals,
+    today,
+    devices,
+    guessDistribution,
+    topPlayers,
+    sessions: sessions.slice(0, 80),
+  }
 }
 
 async function fetchLeaderboardToday(todayKey: string): Promise<LeaderboardEntry[]> {

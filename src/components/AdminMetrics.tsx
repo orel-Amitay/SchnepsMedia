@@ -6,6 +6,7 @@ import {
   watchAuth,
   type Player,
 } from '../lib/auth'
+import { formatDuration } from '../lib/clientContext'
 import { loadLocalMetricsSnapshot, loadMetricsSnapshot, type MetricsSnapshot } from '../lib/metrics'
 import './AdminMetrics.css'
 
@@ -20,6 +21,19 @@ function Stat({ label, value }: { label: string; value: string | number }) {
 
 function formatTime(ts: number) {
   return new Date(ts).toLocaleString()
+}
+
+function shortId(id: string | null | undefined) {
+  if (!id) return '—'
+  if (id.length <= 14) return id
+  return `${id.slice(0, 8)}…${id.slice(-4)}`
+}
+
+function deviceLabel(device: string) {
+  if (device === 'phone') return 'Phone'
+  if (device === 'tablet') return 'Tablet'
+  if (device === 'desktop') return 'Desktop'
+  return 'Unknown'
 }
 
 export function AdminMetrics() {
@@ -148,6 +162,8 @@ export function AdminMetrics() {
               <h2 className="admin-section-title">Today</h2>
               <div className="admin-grid">
                 <Stat label="Page views" value={snap.today.pageViews} />
+                <Stat label="Sessions" value={snap.today.sessions} />
+                <Stat label="Avg time" value={formatDuration(snap.today.avgSessionSec)} />
                 <Stat label="Sign-ins" value={snap.today.signIns} />
                 <Stat label="Games" value={snap.today.games} />
                 <Stat label="Win rate" value={`${snap.today.winRate}%`} />
@@ -157,9 +173,19 @@ export function AdminMetrics() {
                 <Stat label="Unique players" value={snap.today.uniquePlayers} />
               </div>
 
+              <h2 className="admin-section-title">Devices</h2>
+              <div className="admin-grid">
+                <Stat label="Phone" value={snap.devices.phone} />
+                <Stat label="Desktop" value={snap.devices.desktop} />
+                <Stat label="Tablet" value={snap.devices.tablet} />
+                <Stat label="Unknown" value={snap.devices.unknown} />
+              </div>
+
               <h2 className="admin-section-title">All time (recent buffer)</h2>
               <div className="admin-grid">
                 <Stat label="Events" value={snap.totals.events} />
+                <Stat label="Sessions" value={snap.totals.sessions} />
+                <Stat label="Avg time" value={formatDuration(snap.totals.avgSessionSec)} />
                 <Stat label="Page views" value={snap.totals.pageViews} />
                 <Stat label="Sign-ins" value={snap.totals.signIns} />
                 <Stat label="Games" value={snap.totals.games} />
@@ -168,6 +194,57 @@ export function AdminMetrics() {
                 <Stat label="New routes" value={snap.totals.newRoutes} />
                 <Stat label="Unique players" value={snap.totals.uniquePlayers} />
               </div>
+
+              <section className="admin-card">
+                <h3>Visitors / sessions</h3>
+                {snap.sessions.length === 0 ? (
+                  <p className="admin-muted">No sessions yet.</p>
+                ) : (
+                  <div className="admin-table-wrap">
+                    <table className="admin-table">
+                      <thead>
+                        <tr>
+                          <th>Session ID</th>
+                          <th>User ID</th>
+                          <th>Name</th>
+                          <th>Device</th>
+                          <th>Time on site</th>
+                          <th>Games</th>
+                          <th>Last seen</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {snap.sessions.map((s) => (
+                          <tr key={s.sessionId}>
+                            <td>
+                              <code className="admin-mono" title={s.sessionId}>
+                                {shortId(s.sessionId)}
+                              </code>
+                            </td>
+                            <td>
+                              <code className="admin-mono" title={s.uid ?? undefined}>
+                                {shortId(s.uid)}
+                              </code>
+                            </td>
+                            <td>{s.displayName ?? s.email ?? s.provider}</td>
+                            <td>
+                              {deviceLabel(s.device)}
+                              {s.viewport ? (
+                                <span className="admin-sub"> · {s.viewport}</span>
+                              ) : null}
+                            </td>
+                            <td>{formatDuration(s.durationSec)}</td>
+                            <td>
+                              {s.wins}W / {s.games}G
+                            </td>
+                            <td>{formatTime(s.lastAt)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </section>
 
               <div className="admin-columns">
                 <section className="admin-card">
@@ -234,8 +311,11 @@ export function AdminMetrics() {
                       <tr>
                         <th>Time</th>
                         <th>Type</th>
+                        <th>Session</th>
+                        <th>User ID</th>
+                        <th>Device</th>
                         <th>User</th>
-                        <th>Meta</th>
+                        <th>Dwell</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -243,8 +323,23 @@ export function AdminMetrics() {
                         <tr key={`${e.createdAt}-${e.type}-${i}`}>
                           <td>{formatTime(e.createdAt)}</td>
                           <td>{e.type}</td>
+                          <td>
+                            <code className="admin-mono" title={e.sessionId}>
+                              {shortId(e.sessionId)}
+                            </code>
+                          </td>
+                          <td>
+                            <code className="admin-mono" title={e.uid ?? undefined}>
+                              {shortId(e.uid)}
+                            </code>
+                          </td>
+                          <td>{deviceLabel(e.device || String(e.meta.device ?? 'unknown'))}</td>
                           <td>{e.displayName ?? e.email ?? e.provider}</td>
-                          <td>{Object.keys(e.meta).length ? JSON.stringify(e.meta) : '—'}</td>
+                          <td>
+                            {typeof e.meta.durationSec === 'number'
+                              ? formatDuration(e.meta.durationSec)
+                              : '—'}
+                          </td>
                         </tr>
                       ))}
                     </tbody>

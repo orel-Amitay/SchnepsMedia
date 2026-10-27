@@ -7,7 +7,7 @@ import { LineBadge } from './components/LineBadge'
 import { SponsorBar } from './components/SponsorBar'
 import { IconReset, IconSettings, IconStats, IconTrophy } from './components/Icons'
 import { isAdminPlayer } from './lib/admin'
-import { trackEvent } from './lib/analytics'
+import { startSessionTracking, trackEvent } from './lib/analytics'
 import {
   completeGoogleRedirect,
   firebaseConfigured,
@@ -67,12 +67,16 @@ export default function App() {
   const [answerPeek, setAnswerPeek] = useState(false)
   const firstLoad = useRef(true)
   const practiceNonce = useRef(0)
+  const playerRef = useRef(player)
+  playerRef.current = player
 
   useEffect(() => watchAuth(setPlayer), [])
 
   useEffect(() => {
     trackEvent('page_view', null, { path: window.location.pathname })
   }, [])
+
+  useEffect(() => startSessionTracking(() => playerRef.current), [])
 
   useEffect(() => {
     void completeGoogleRedirect()
