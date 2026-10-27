@@ -30,7 +30,8 @@ export type SubwayGraph = {
   edges: GraphEdge[]
 }
 
-export type TileStatus = 'correct' | 'present' | 'absent' | 'empty' | 'pending'
+/** correct=green, shared=blue (same routing family), present=yellow, absent=gray */
+export type TileStatus = 'correct' | 'shared' | 'present' | 'absent' | 'empty' | 'pending'
 
 export type Puzzle = {
   dateKey: string
@@ -43,4 +44,18 @@ export type Puzzle = {
 export type GuessResult = {
   guess: LineId[]
   statuses: TileStatus[]
+}
+
+export type Settings = {
+  showStatusBadges: boolean
+  darkMode: boolean
+}
+
+export type Stats = {
+  played: number
+  wins: number
+  currentStreak: number
+  maxStreak: number
+  guessDistribution: number[]
+  lastDateKey: string | null
 }

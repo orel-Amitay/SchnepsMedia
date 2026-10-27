@@ -9,6 +9,7 @@ type Props = {
   current: LineId[]
   shake: boolean
   revealRow: number | null
+  showBadges: boolean
 }
 
 function tileClass(status: TileStatus, revealing: boolean): string {
@@ -25,8 +26,14 @@ export function Board({
   current,
   shake,
   revealRow,
+  showBadges,
 }: Props) {
-  const rows: Array<{ lines: (LineId | null)[]; statuses: TileStatus[]; isCurrent: boolean; index: number }> = []
+  const rows: Array<{
+    lines: (LineId | null)[]
+    statuses: TileStatus[]
+    isCurrent: boolean
+    index: number
+  }> = []
 
   for (let i = 0; i < maxGuesses; i++) {
     if (i < guesses.length) {
@@ -37,7 +44,10 @@ export function Board({
         index: i,
       })
     } else if (i === guesses.length) {
-      const lines: (LineId | null)[] = Array.from({ length: solutionLength }, (_, j) => current[j] ?? null)
+      const lines: (LineId | null)[] = Array.from(
+        { length: solutionLength },
+        (_, j) => current[j] ?? null,
+      )
       rows.push({
         lines,
         statuses: Array.from({ length: solutionLength }, () => 'pending'),
@@ -72,7 +82,11 @@ export function Board({
                 style={revealing ? { animationDelay: `${j * 180}ms` } : undefined}
                 role="gridcell"
               >
-                {line ? <LineBadge line={line} size="lg" /> : <span className="tile-empty" />}
+                {line ? (
+                  <LineBadge line={line} size="lg" status={showBadges && status !== 'pending' && status !== 'empty' ? status : undefined} />
+                ) : (
+                  <span className="tile-empty" />
+                )}
               </div>
             )
           })}

@@ -11,12 +11,16 @@ type Props = {
 
 export function Keyboard({ onPick, onDelete, onEnter, keyHints, disabled }: Props) {
   const lines = getPlayableLines()
-  // Layout roughly by MTA grouping
   const rows: LineId[][] = [
-    lines.filter((l) => ['1', '2', '3', '4', '5', '6', '7', '7X', '6X'].includes(l)),
+    lines.filter((l) => ['1', '2', '3', '4', '5', '6', '6X', '7', '7X'].includes(l)),
     lines.filter((l) => ['A', 'C', 'E', 'B', 'D', 'F', 'M'].includes(l)),
     lines.filter((l) => ['G', 'J', 'Z', 'L', 'N', 'Q', 'R', 'W'].includes(l)),
-    lines.filter((l) => !['1','2','3','4','5','6','7','7X','6X','A','C','E','B','D','F','M','G','J','Z','L','N','Q','R','W'].includes(l)),
+    lines.filter(
+      (l) =>
+        !['1', '2', '3', '4', '5', '6', '6X', '7', '7X', 'A', 'C', 'E', 'B', 'D', 'F', 'M', 'G', 'J', 'Z', 'L', 'N', 'Q', 'R', 'W'].includes(
+          l,
+        ),
+    ),
   ].filter((r) => r.length > 0)
 
   return (
@@ -31,11 +35,7 @@ export function Keyboard({ onPick, onDelete, onEnter, keyHints, disabled }: Prop
                 key={line}
                 type="button"
                 className={`key key-line${hint ? ` key--${hint}` : ''}`}
-                style={
-                  !hint
-                    ? { backgroundColor: route?.color, color: route?.textColor }
-                    : undefined
-                }
+                style={!hint ? { backgroundColor: route?.color, color: route?.textColor } : undefined}
                 onClick={() => onPick(line)}
                 disabled={disabled}
                 aria-label={`Line ${route?.name ?? line}`}

@@ -6,8 +6,11 @@ import { StationBanner } from './components/StationBanner'
 import { LineBadge } from './components/LineBadge'
 import { buildShareText, isWin, scoreGuess } from './lib/feedback'
 import { getDailyPuzzle } from './lib/puzzle'
+import { loadSettings, saveSettings } from './lib/settings'
+import { loadStats, recordFinish } from './lib/stats'
 import { loadDay, saveDay } from './lib/storage'
-import type { LineId, TileStatus } from './lib/types'
+import { isValidTrip } from './lib/validate'
+import type { LineId, Settings, Stats, TileStatus } from './lib/types'
 import './App.css'
 
 const MAX_GUESSES = 6
@@ -15,6 +18,7 @@ const MAX_GUESSES = 6
 export default function App() {
   const puzzle = useMemo(() => getDailyPuzzle(), [])
   const length = puzzle.solution.length
+  const transfers = Math.max(0, length - 1)
   const debug = useMemo(() => {
     if (typeof window === 'undefined') return false
     return new URLSearchParams(window.location.search).has('debug')
@@ -28,8 +32,11 @@ export default function App() {
   const [revealRow, setRevealRow] = useState<number | null>(null)
   const [toast, setToast] = useState<string | null>(null)
   const [helpOpen, setHelpOpen] = useState(false)
-  const [resultOpen, setResultOpen] = useState(false)
+  const [statsOpen, setStatsOpen] = useState(false)
+  const [settingsOpen, setSettingsOpen] = useState(false)
   const [hydrated, setHydrated] = useState(false)
+  const [settings, setSettings] = useState<Settings>(() => loadSettings())
+  const [stats, setStats] = useState<Stats>(() => loadStats())
 
   useEffect(() => {
     const saved = loadDay(puzzle.dateKey)
@@ -37,7 +44,7 @@ export default function App() {
       setGuesses(saved.guesses)
       setStatuses(saved.guesses.map((g) => scoreGuess(g, puzzle.solution)))
       setGameStatus(saved.status)
-      if (saved.status !== 'playing') setResultOpen(true)
+      if (saved.status !== 'playing') setStatsOpen(true)
     } else {
       setHelpOpen(true)
     }
@@ -49,10 +56,16 @@ export default function App() {
     saveDay({ dateKey: puzzle.dateKey, guesses, status: gameStatus })
   }, [guesses, gameStatus, puzzle.dateKey, hydrated])
 
+  useEffect(() => {
+    document.documentElement.dataset.theme = settings.darkMode ? 'dark' : 'light'
+    saveSettings(settings)
+  }, [settings])
+
   const keyHints = useMemo(() => {
     const hints: Record<string, TileStatus> = {}
     const rank: Record<TileStatus, number> = {
-      correct: 3,
+      correct: 4,
+      shared: 3,
       present: 2,
       absent: 1,
       empty: 0,
@@ -78,6 +91,12 @@ export default function App() {
     window.setTimeout(() => setShake(false), 450)
   }
 
+  function finishGame(next: 'won' | 'lost', guessCount: number) {
+    setGameStatus(next)
+    setStats(recordFinish({ dateKey: puzzle.dateKey, won: next === 'won', guesses: guessCount }))
+    setStatsOpen(true)
+  }
+
   function onPick(line: LineId) {
     if (gameStatus !== 'playing') return
     if (current.length >= length) {
@@ -101,6 +120,12 @@ export default function App() {
       return
     }
 
+    if (!isValidTrip(puzzle.originId, puzzle.destinationId, current)) {
+      pulseShake()
+      showToast('Not a valid trip')
+      return
+    }
+
     const result = scoreGuess(current, puzzle.solution)
     const nextGuesses = [...guesses, current]
     const nextStatuses = [...statuses, result]
@@ -113,20 +138,15 @@ export default function App() {
 
     window.setTimeout(() => {
       setRevealRow(null)
-      if (isWin(result)) {
-        setGameStatus('won')
-        setResultOpen(true)
-      } else if (nextGuesses.length >= MAX_GUESSES) {
-        setGameStatus('lost')
-        setResultOpen(true)
-      }
+      if (isWin(result)) finishGame('won', nextGuesses.length)
+      else if (nextGuesses.length >= MAX_GUESSES) finishGame('lost', nextGuesses.length)
     }, length * 180 + 350)
   }
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.metaKey || e.ctrlKey || e.altKey) return
-      if (helpOpen || resultOpen) return
+      if (helpOpen || statsOpen || settingsOpen) return
       if (e.key === 'Enter') {
         e.preventDefault()
         onEnter()
@@ -137,17 +157,14 @@ export default function App() {
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-    // Intentionally rebind when game inputs change
   })
 
   function revealAnswer() {
-    if (gameStatus === 'won') {
-      setResultOpen(true)
-      return
+    if (gameStatus === 'playing') {
+      setStats(recordFinish({ dateKey: puzzle.dateKey, won: false, guesses: guesses.length }))
+      setGameStatus('lost')
+      setCurrent([])
     }
-    setGameStatus('lost')
-    setCurrent([])
-    setResultOpen(true)
   }
 
   async function share() {
@@ -159,9 +176,8 @@ export default function App() {
       maxGuesses: MAX_GUESSES,
     })
     try {
-      if (navigator.share) {
-        await navigator.share({ text })
-      } else {
+      if (navigator.share) await navigator.share({ text })
+      else {
         await navigator.clipboard.writeText(text)
         showToast('Copied results')
       }
@@ -175,32 +191,32 @@ export default function App() {
     }
   }
 
+  const winPct = stats.played ? Math.round((stats.wins / stats.played) * 100) : 0
+  const maxDist = Math.max(1, ...stats.guessDistribution)
+
   return (
     <div className="app">
-      <div className="atmosphere" aria-hidden="true" />
       <header className="topbar">
-        <button type="button" className="icon-btn" onClick={() => setHelpOpen(true)} aria-label="How to play">
-          ?
-        </button>
-        <div className="brand">
-          <p className="brand-kicker">Daily NYC</p>
-          <h1 className="brand-title">Subwaydle</h1>
+        <span className="topbar-spacer" aria-hidden="true" />
+        <h1 className="brand-title">Subwaydle</h1>
+        <div className="topbar-actions">
+          <button type="button" className="icon-btn" onClick={() => setHelpOpen(true)} aria-label="How to play">
+            ?
+          </button>
+          <button type="button" className="icon-btn" onClick={() => setStatsOpen(true)} aria-label="Statistics">
+            ▮▮
+          </button>
+          <button type="button" className="icon-btn" onClick={() => setSettingsOpen(true)} aria-label="Settings">
+            ⚙
+          </button>
         </div>
-        <button
-          type="button"
-          className="icon-btn"
-          onClick={() => setResultOpen(true)}
-          aria-label="Results"
-        >
-          ≡
-        </button>
       </header>
 
       <main className="main">
         <StationBanner
           originId={puzzle.originId}
           destinationId={puzzle.destinationId}
-          dateKey={puzzle.dateKey}
+          transfers={transfers}
         />
 
         {debug && (
@@ -211,7 +227,6 @@ export default function App() {
                 <LineBadge key={`dbg-${line}-${i}`} line={line} size="md" />
               ))}
             </div>
-            <p className="debug-hint">Visible because URL has ?debug — remove it for normal play.</p>
           </div>
         )}
 
@@ -223,6 +238,7 @@ export default function App() {
           current={current}
           shake={shake}
           revealRow={revealRow}
+          showBadges={settings.showStatusBadges}
         />
 
         <Keyboard
@@ -232,65 +248,132 @@ export default function App() {
           keyHints={keyHints}
           disabled={gameStatus !== 'playing'}
         />
-
-        {gameStatus === 'playing' && (
-          <button type="button" className="reveal-btn" onClick={revealAnswer}>
-            Show answer
-          </button>
-        )}
       </main>
 
       {toast && <div className="toast">{toast}</div>}
 
-      <Modal open={helpOpen} title="How to play" onClose={() => setHelpOpen(false)}>
+      <Modal open={helpOpen} title="How to Play" onClose={() => setHelpOpen(false)}>
+        <p>Guess the SUBWAYDLE in 6 tries.</p>
         <p>
-          Each day you get one trip between two NYC subway stations. Guess the{' '}
-          <strong>sequence of lines</strong> for a minimum-transfer route.
+          Each guess must be a valid subway trip involving {length} train
+          {length === 1 ? '' : 's'} using available transfers between them.
         </p>
-        <ul className="help-list">
+        <p>You need to guess a specific set of trains that can make the trip.</p>
+        <h3 className="help-sub">Examples</h3>
+        <ul className="help-examples">
           <li>
-            <span className="swatch swatch--correct" /> Correct line in the correct position
+            <span className="swatch swatch--correct" />
+            <span>
+              <strong>Green</strong> — train is in the correct spot of the trip.
+            </span>
           </li>
           <li>
-            <span className="swatch swatch--present" /> Line is in the route, wrong position
+            <span className="swatch swatch--shared" />
+            <span>
+              <strong>Blue</strong> — another train that shares the same routing is in that spot.
+            </span>
           </li>
           <li>
-            <span className="swatch swatch--absent" /> Line is not in the route
+            <span className="swatch swatch--present" />
+            <span>
+              <strong>Yellow</strong> — train is part of the trip, but in the wrong spot.
+            </span>
+          </li>
+          <li>
+            <span className="swatch swatch--absent" />
+            <span>
+              <strong>Gray</strong> — train is not part of the trip in any spot.
+            </span>
           </li>
         </ul>
         <p className="help-note">
-          Topology is derived from the MTA GTFS subway feed. Inspired by the Subwaydle concept —
-          original implementation, not affiliated with subwaydle.com or the MTA.
+          Multiple routings may be possible, but the goal is the puzzle of the day (minimum-transfer
+          routing on midday GTFS topology). Original game inspired by subwaydle.com — not affiliated.
         </p>
       </Modal>
 
-      <Modal
-        open={resultOpen}
-        title={gameStatus === 'won' ? 'You made it' : gameStatus === 'lost' ? 'End of the line' : 'Progress'}
-        onClose={() => setResultOpen(false)}
-      >
-        <p className="result-summary">
-          {gameStatus === 'won'
-            ? `Solved in ${guesses.length}/${MAX_GUESSES}.`
-            : gameStatus === 'lost'
-              ? 'The correct lines were:'
-              : `Guesses used: ${guesses.length}/${MAX_GUESSES}.`}
-        </p>
-        {(gameStatus === 'lost' || gameStatus === 'won') && (
-          <div className="result-solution" aria-label="Solution">
-            {puzzle.solution.map((line, i) => (
-              <LineBadge key={`${line}-${i}`} line={line} size="md" />
-            ))}
+      <Modal open={statsOpen} title="Statistics" onClose={() => setStatsOpen(false)}>
+        <div className="stats-row">
+          <div className="stat">
+            <div className="stat-num">{stats.played}</div>
+            <div className="stat-label">Played</div>
           </div>
-        )}
-        {gameStatus === 'playing' && (
-          <button type="button" className="reveal-btn reveal-btn--modal" onClick={revealAnswer}>
-            Show answer
-          </button>
-        )}
+          <div className="stat">
+            <div className="stat-num">{winPct}</div>
+            <div className="stat-label">Win %</div>
+          </div>
+          <div className="stat">
+            <div className="stat-num">{stats.currentStreak}</div>
+            <div className="stat-label">Current Streak</div>
+          </div>
+          <div className="stat">
+            <div className="stat-num">{stats.maxStreak}</div>
+            <div className="stat-label">Max Streak</div>
+          </div>
+        </div>
+        <h3 className="help-sub">Guess Distribution</h3>
+        <div className="dist">
+          {stats.guessDistribution.map((n, i) => (
+            <div className="dist-row" key={i}>
+              <span className="dist-label">{i + 1}</span>
+              <div className="dist-bar-wrap">
+                <div
+                  className="dist-bar"
+                  style={{ width: `${Math.max(8, (n / maxDist) * 100)}%` }}
+                >
+                  {n}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
         {gameStatus !== 'playing' && (
-          <button type="button" className="share-btn" onClick={share}>
-            Share results
+          <>
+            <p className="result-summary">
+              {gameStatus === 'won'
+                ? `Solved in ${guesses.length}/${MAX_GUESSES}.`
+                : 'The correct lines were:'}
+            </p>
+            <div className="result-solution" aria-label="Solution">
+              {puzzle.solution.map((line, i) => (
+                <LineBadge key={`sol-${line}-${i}`} line={line} size="md" />
+              ))}
+            </div>
+            <button type="button" className="share-btn" onClick={share}>
+              Share
+            </button>
+          </>
+        )}
+      </Modal>
+
+      <Modal open={settingsOpen} title="Settings" onClose={() => setSettingsOpen(false)}>
+        <label className="setting-row">
+          <span>Show answer status badges</span>
+          <input
+            type="checkbox"
+            checked={settings.showStatusBadges}
+            onChange={(e) => setSettings((s) => ({ ...s, showStatusBadges: e.target.checked }))}
+          />
+        </label>
+        <label className="setting-row">
+          <span>Dark mode</span>
+          <input
+            type="checkbox"
+            checked={settings.darkMode}
+            onChange={(e) => setSettings((s) => ({ ...s, darkMode: e.target.checked }))}
+          />
+        </label>
+        {gameStatus === 'playing' && (
+          <button
+            type="button"
+            className="reveal-btn reveal-btn--modal"
+            onClick={() => {
+              revealAnswer()
+              setSettingsOpen(false)
+              setStatsOpen(true)
+            }}
+          >
+            Show answer
           </button>
         )}
       </Modal>

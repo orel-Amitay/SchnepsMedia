@@ -1,10 +1,12 @@
+import { sharesRouting } from './routeGroups'
 import type { LineId, TileStatus } from './types'
 
 /**
- * Wordle-style feedback for a guessed line sequence vs the solution.
- * Green = correct line in correct position
- * Yellow = line appears in solution elsewhere (with multiplicity)
- * Gray = not in solution
+ * Feedback inspired by subwaydle.com:
+ * Green  — exact line in exact position
+ * Blue   — guessed line shares routing with the correct line in that spot
+ * Yellow — line appears in the solution elsewhere
+ * Gray   — not in the solution
  */
 export function scoreGuess(guess: LineId[], solution: LineId[]): TileStatus[] {
   const len = solution.length
@@ -16,7 +18,6 @@ export function scoreGuess(guess: LineId[], solution: LineId[]): TileStatus[] {
     remaining.set(s, (remaining.get(s) ?? 0) + 1)
   }
 
-  // First pass: exact matches
   for (let i = 0; i < len; i++) {
     const g = guess[i]
     if (g && g === solution[i]) {
@@ -25,12 +26,15 @@ export function scoreGuess(guess: LineId[], solution: LineId[]): TileStatus[] {
     }
   }
 
-  // Second pass: present elsewhere
   for (let i = 0; i < len; i++) {
     if (statuses[i] === 'correct') continue
     const g = guess[i]
     if (!g) {
       statuses[i] = 'absent'
+      continue
+    }
+    if (sharesRouting(g, solution[i]!)) {
+      statuses[i] = 'shared'
       continue
     }
     const left = remaining.get(g) ?? 0
@@ -51,6 +55,7 @@ export function isWin(statuses: TileStatus[]): boolean {
 
 const emoji: Record<TileStatus, string> = {
   correct: '🟩',
+  shared: '🟦',
   present: '🟨',
   absent: '⬛',
   empty: '⬜',
