@@ -2,7 +2,6 @@ import {
   GoogleAuthProvider,
   getRedirectResult,
   onAuthStateChanged,
-  signInWithPopup,
   signInWithRedirect,
   signOut as firebaseSignOut,
   type User,
@@ -77,12 +76,6 @@ function authErrorMessage(err: unknown): string {
   if (code === 'auth/operation-not-allowed') {
     return 'Google provider is disabled in Firebase Auth'
   }
-  if (code === 'auth/popup-blocked') {
-    return 'Popup blocked — allow popups or try again'
-  }
-  if (code === 'auth/popup-closed-by-user' || code === 'auth/cancelled-popup-request') {
-    return 'Sign-in cancelled'
-  }
   if (code === 'auth/api-key-not-valid' || /API key not valid/i.test(message)) {
     return 'Firebase API key invalid — fix key in Google Cloud / Firebase settings'
   }
@@ -93,11 +86,16 @@ function authErrorMessage(err: unknown): string {
 export async function completeGoogleRedirect(): Promise<Player | null> {
   const auth = getFirebaseAuth()
   if (!auth || !firebaseConfigured) return null
-  const result = await getRedirectResult(auth)
-  if (!result?.user) return null
-  return fromFirebaseUser(result.user)
+  try {
+    const result = await getRedirectResult(auth)
+    if (!result?.user) return null
+    return fromFirebaseUser(result.user)
+  } catch (err) {
+    throw new Error(authErrorMessage(err))
+  }
 }
 
+/** Full-page Google redirect (more reliable than popup on Vercel). */
 export async function signInWithGoogle(): Promise<Player> {
   const auth = getFirebaseAuth()
   if (!auth || !firebaseConfigured) {
@@ -105,25 +103,13 @@ export async function signInWithGoogle(): Promise<Player> {
   }
   const provider = new GoogleAuthProvider()
   provider.setCustomParameters({ prompt: 'select_account' })
+  provider.addScope('profile')
+  provider.addScope('email')
   try {
-    const result = await signInWithPopup(auth, provider)
-    return fromFirebaseUser(result.user)
+    await signInWithRedirect(auth, provider)
+    throw new Error('REDIRECTING')
   } catch (err) {
-    const code =
-      err && typeof err === 'object' && 'code' in err
-        ? String((err as { code?: string }).code ?? '')
-        : ''
-    // Popup often fails in mobile / strict browsers — fall back to redirect.
-    if (
-      code === 'auth/popup-blocked' ||
-      code === 'auth/popup-closed-by-user' ||
-      code === 'auth/cancelled-popup-request' ||
-      code === 'auth/operation-not-supported-in-this-environment'
-    ) {
-      await signInWithRedirect(auth, provider)
-      // Page will navigate away; caller won't get a player this turn.
-      throw new Error('REDIRECTING')
-    }
+    if (err instanceof Error && err.message === 'REDIRECTING') throw err
     throw new Error(authErrorMessage(err))
   }
 }
