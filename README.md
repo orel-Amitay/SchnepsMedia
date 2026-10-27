@@ -41,6 +41,15 @@ For QA, open the app with `?debug` in the URL to reveal today’s lines (e.g. `h
 
 Station adjacency and line colors are derived from the public [MTA subway GTFS](https://rrgtfsfeeds.s3.amazonaws.com/gtfs_subway.zip) static feed (`src/data/graph.json`). Routes are computed client-side for a date-seeded daily puzzle.
 
+## Schneps Media / Auth / Leaderboard
+
+The game is presented by [Schneps Media](https://www.schnepsmedia.com/).
+
+- **Google Sign-In** uses Firebase Auth when `VITE_FIREBASE_*` env vars are set (see `.env.example`).
+- Enable **Google** as a sign-in provider in the Firebase console, and add your deploy domain to Authorized domains.
+- Create a Firestore collection `leaderboard` (documents auto-written as `{dateKey}_{uid}`) with rules that allow authenticated read/write of own scores and public read of the daily board.
+- Without Firebase keys, players can still **Continue as guest**; scores stay on-device until Google is configured.
+
 ## Stack
 
-Vite + React + TypeScript
+Vite + React + TypeScript + Firebase (optional)

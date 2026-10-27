@@ -4,7 +4,21 @@ import { Keyboard } from './components/Keyboard'
 import { Modal } from './components/Modal'
 import { StationBanner } from './components/StationBanner'
 import { LineBadge } from './components/LineBadge'
+import { SponsorBar } from './components/SponsorBar'
+import {
+  firebaseConfigured,
+  signInAsGuest,
+  signInWithGoogle,
+  signOutPlayer,
+  watchAuth,
+  type Player,
+} from './lib/auth'
 import { buildShareText, isWin, scoreGuess } from './lib/feedback'
+import {
+  fetchLeaderboard,
+  submitScore,
+  type LeaderboardEntry,
+} from './lib/leaderboard'
 import { getDailyPuzzle } from './lib/puzzle'
 import { loadSettings, saveSettings } from './lib/settings'
 import { loadStats, recordFinish } from './lib/stats'
@@ -34,9 +48,17 @@ export default function App() {
   const [helpOpen, setHelpOpen] = useState(false)
   const [statsOpen, setStatsOpen] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
+  const [authOpen, setAuthOpen] = useState(false)
+  const [boardOpen, setBoardOpen] = useState(false)
   const [hydrated, setHydrated] = useState(false)
   const [settings, setSettings] = useState<Settings>(() => loadSettings())
   const [stats, setStats] = useState<Stats>(() => loadStats())
+  const [player, setPlayer] = useState<Player | null>(null)
+  const [guestName, setGuestName] = useState('')
+  const [authBusy, setAuthBusy] = useState(false)
+  const [leaders, setLeaders] = useState<LeaderboardEntry[]>([])
+
+  useEffect(() => watchAuth(setPlayer), [])
 
   useEffect(() => {
     const saved = loadDay(puzzle.dateKey)
@@ -60,6 +82,11 @@ export default function App() {
     document.documentElement.dataset.theme = settings.darkMode ? 'dark' : 'light'
     saveSettings(settings)
   }, [settings])
+
+  useEffect(() => {
+    if (!boardOpen) return
+    void fetchLeaderboard(puzzle.dateKey).then(setLeaders)
+  }, [boardOpen, puzzle.dateKey, gameStatus, player])
 
   const keyHints = useMemo(() => {
     const hints: Record<string, TileStatus> = {}
@@ -91,9 +118,24 @@ export default function App() {
     window.setTimeout(() => setShake(false), 450)
   }
 
+  async function publishResult(next: 'won' | 'lost', guessCount: number, who: Player | null) {
+    if (!who) return
+    try {
+      await submitScore({
+        player: who,
+        dateKey: puzzle.dateKey,
+        won: next === 'won',
+        guesses: guessCount,
+      })
+    } catch {
+      // offline / rules
+    }
+  }
+
   function finishGame(next: 'won' | 'lost', guessCount: number) {
     setGameStatus(next)
     setStats(recordFinish({ dateKey: puzzle.dateKey, won: next === 'won', guesses: guessCount }))
+    void publishResult(next, guessCount, player)
     setStatsOpen(true)
   }
 
@@ -119,7 +161,6 @@ export default function App() {
       showToast('Fill every slot')
       return
     }
-
     if (!isValidTrip(puzzle.originId, puzzle.destinationId, current)) {
       pulseShake()
       showToast('Not a valid trip')
@@ -146,7 +187,7 @@ export default function App() {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.metaKey || e.ctrlKey || e.altKey) return
-      if (helpOpen || statsOpen || settingsOpen) return
+      if (helpOpen || statsOpen || settingsOpen || authOpen || boardOpen) return
       if (e.key === 'Enter') {
         e.preventDefault()
         onEnter()
@@ -164,7 +205,40 @@ export default function App() {
       setStats(recordFinish({ dateKey: puzzle.dateKey, won: false, guesses: guesses.length }))
       setGameStatus('lost')
       setCurrent([])
+      void publishResult('lost', guesses.length, player)
     }
+  }
+
+  async function handleGoogle() {
+    setAuthBusy(true)
+    try {
+      const p = await signInWithGoogle()
+      setPlayer(p)
+      setAuthOpen(false)
+      showToast(`Hi, ${p.displayName.split(' ')[0]}`)
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : ''
+      if (msg === 'GOOGLE_NOT_CONFIGURED') {
+        showToast('Add Firebase keys for Google')
+      } else {
+        showToast('Google sign-in failed')
+      }
+    } finally {
+      setAuthBusy(false)
+    }
+  }
+
+  function handleGuest() {
+    const p = signInAsGuest(guestName)
+    setPlayer(p)
+    setAuthOpen(false)
+    showToast(`Playing as ${p.displayName}`)
+  }
+
+  async function handleSignOut() {
+    await signOutPlayer()
+    setPlayer(null)
+    showToast('Signed out')
   }
 
   async function share() {
@@ -196,12 +270,33 @@ export default function App() {
 
   return (
     <div className="app">
+      <SponsorBar />
+
       <header className="topbar">
-        <span className="topbar-spacer" aria-hidden="true" />
+        <div className="topbar-left">
+          <button
+            type="button"
+            className="auth-chip"
+            onClick={() => (player ? setSettingsOpen(true) : setAuthOpen(true))}
+            aria-label={player ? 'Account' : 'Sign in'}
+          >
+            {player?.photoURL ? (
+              <img className="auth-avatar" src={player.photoURL} alt="" />
+            ) : (
+              <span className="auth-avatar auth-avatar--placeholder">
+                {(player?.displayName ?? 'G')[0]?.toUpperCase()}
+              </span>
+            )}
+            <span className="auth-chip-text">{player ? player.displayName.split(' ')[0] : 'Sign in'}</span>
+          </button>
+        </div>
         <h1 className="brand-title">Subwaydle</h1>
         <div className="topbar-actions">
           <button type="button" className="icon-btn" onClick={() => setHelpOpen(true)} aria-label="How to play">
             ?
+          </button>
+          <button type="button" className="icon-btn" onClick={() => setBoardOpen(true)} aria-label="Leaderboard">
+            ♛
           </button>
           <button type="button" className="icon-btn" onClick={() => setStatsOpen(true)} aria-label="Statistics">
             ▮▮
@@ -258,38 +353,106 @@ export default function App() {
           Each guess must be a valid subway trip involving {length} train
           {length === 1 ? '' : 's'} using available transfers between them.
         </p>
-        <p>You need to guess a specific set of trains that can make the trip.</p>
+        <div className="sponsor-note">
+          <img src="/schneps-media.png" alt="" className="sponsor-note-logo" />
+          <p>
+            This daily NYC subway puzzle is presented by{' '}
+            <a href="https://www.schnepsmedia.com/" target="_blank" rel="noopener noreferrer">
+              Schneps Media
+            </a>
+            .
+          </p>
+        </div>
         <h3 className="help-sub">Examples</h3>
         <ul className="help-examples">
           <li>
             <span className="swatch swatch--correct" />
             <span>
-              <strong>Green</strong> — train is in the correct spot of the trip.
+              <strong>Green</strong> — train is in the correct spot.
             </span>
           </li>
           <li>
             <span className="swatch swatch--shared" />
             <span>
-              <strong>Blue</strong> — another train that shares the same routing is in that spot.
+              <strong>Blue</strong> — shared routing in that spot.
             </span>
           </li>
           <li>
             <span className="swatch swatch--present" />
             <span>
-              <strong>Yellow</strong> — train is part of the trip, but in the wrong spot.
+              <strong>Yellow</strong> — in the trip, wrong spot.
             </span>
           </li>
           <li>
             <span className="swatch swatch--absent" />
             <span>
-              <strong>Gray</strong> — train is not part of the trip in any spot.
+              <strong>Gray</strong> — not in the trip.
             </span>
           </li>
         </ul>
-        <p className="help-note">
-          Multiple routings may be possible, but the goal is the puzzle of the day (minimum-transfer
-          routing on midday GTFS topology). Original game inspired by subwaydle.com — not affiliated.
-        </p>
+        <p className="help-note">Inspired by the Subwaydle concept — not affiliated with subwaydle.com or the MTA.</p>
+      </Modal>
+
+      <Modal open={authOpen} title="Sign in" onClose={() => setAuthOpen(false)}>
+        <p>Sign in to climb today’s Schneps Media leaderboard.</p>
+        <button type="button" className="google-btn" onClick={handleGoogle} disabled={authBusy}>
+          <span className="google-g" aria-hidden="true">
+            G
+          </span>
+          Continue with Google
+        </button>
+        {!firebaseConfigured && (
+          <p className="help-note">
+            Google Sign-In needs Firebase keys (`VITE_FIREBASE_*`). Until then you can play as a guest
+            below — scores stay on this device.
+          </p>
+        )}
+        <div className="guest-box">
+          <label className="guest-label" htmlFor="guest-name">
+            Or continue as guest
+          </label>
+          <input
+            id="guest-name"
+            className="guest-input"
+            placeholder="Display name"
+            value={guestName}
+            onChange={(e) => setGuestName(e.target.value)}
+            maxLength={24}
+          />
+          <button type="button" className="share-btn" onClick={handleGuest}>
+            Continue as guest
+          </button>
+        </div>
+      </Modal>
+
+      <Modal open={boardOpen} title="Leaderboard" onClose={() => setBoardOpen(false)}>
+        <p className="board-date">Today · {puzzle.dateKey}</p>
+        {!player && (
+          <button type="button" className="google-btn" onClick={() => { setBoardOpen(false); setAuthOpen(true) }}>
+            Sign in to compete
+          </button>
+        )}
+        {leaders.length === 0 ? (
+          <p className="help-note">No scores yet today. Finish a puzzle to appear here.</p>
+        ) : (
+          <ol className="leaderboard">
+            {leaders.map((e, i) => (
+              <li key={e.uid} className={player?.uid === e.uid ? 'leaderboard-me' : undefined}>
+                <span className="lb-rank">{i + 1}</span>
+                {e.photoURL ? (
+                  <img className="lb-avatar" src={e.photoURL} alt="" />
+                ) : (
+                  <span className="lb-avatar lb-avatar--ph">{e.displayName[0]?.toUpperCase()}</span>
+                )}
+                <span className="lb-name">{e.displayName}</span>
+                <span className="lb-score">
+                  {e.won ? `${e.guesses}/6` : 'X'}
+                </span>
+              </li>
+            ))}
+          </ol>
+        )}
+        <p className="help-note">Presented by Schneps Media · lower guesses rank higher.</p>
       </Modal>
 
       <Modal open={statsOpen} title="Statistics" onClose={() => setStatsOpen(false)}>
@@ -317,10 +480,7 @@ export default function App() {
             <div className="dist-row" key={i}>
               <span className="dist-label">{i + 1}</span>
               <div className="dist-bar-wrap">
-                <div
-                  className="dist-bar"
-                  style={{ width: `${Math.max(8, (n / maxDist) * 100)}%` }}
-                >
+                <div className="dist-bar" style={{ width: `${Math.max(8, (n / maxDist) * 100)}%` }}>
                   {n}
                 </div>
               </div>
@@ -339,14 +499,36 @@ export default function App() {
                 <LineBadge key={`sol-${line}-${i}`} line={line} size="md" />
               ))}
             </div>
-            <button type="button" className="share-btn" onClick={share}>
-              Share
-            </button>
+            <div className="stats-actions">
+              <button type="button" className="share-btn" onClick={share}>
+                Share
+              </button>
+              <button type="button" className="reveal-btn reveal-btn--modal" onClick={() => setBoardOpen(true)}>
+                Leaderboard
+              </button>
+            </div>
           </>
         )}
       </Modal>
 
       <Modal open={settingsOpen} title="Settings" onClose={() => setSettingsOpen(false)}>
+        {player ? (
+          <div className="account-row">
+            <div>
+              <strong>{player.displayName}</strong>
+              <div className="help-note" style={{ margin: 0 }}>
+                {player.provider === 'google' ? 'Signed in with Google' : 'Guest player'}
+              </div>
+            </div>
+            <button type="button" className="reveal-btn" onClick={handleSignOut}>
+              Sign out
+            </button>
+          </div>
+        ) : (
+          <button type="button" className="google-btn" onClick={() => { setSettingsOpen(false); setAuthOpen(true) }}>
+            Sign in
+          </button>
+        )}
         <label className="setting-row">
           <span>Show answer status badges</span>
           <input
