@@ -1,5 +1,6 @@
 import { ROUTE_SCOPE_LABEL, type RouteScope } from '../lib/boroughs'
 import { getStation } from '../lib/graph'
+import { LINE_COUNT_OPTIONS, lineCountLabel, type LineCount } from '../lib/puzzle'
 import type { StationId } from '../lib/types'
 import { IconFlame, IconHelp, IconShuffle } from './Icons'
 
@@ -10,11 +11,19 @@ type Props = {
   streak: number
   isPractice: boolean
   routeScope: RouteScope
+  lineCount: LineCount
   onRouteScopeChange: (scope: RouteScope) => void
+  onLineCountChange: (count: LineCount) => void
   onOpenStats: () => void
   onOpenHelp: () => void
   onNewRoute: () => void
   onTodayRoute: () => void
+}
+
+function transferText(transfers: number) {
+  if (transfers === 0) return 'Direct'
+  if (transfers === 1) return '1 transfer'
+  return `${transfers} transfers`
 }
 
 export function StationBanner({
@@ -24,7 +33,9 @@ export function StationBanner({
   streak,
   isPractice,
   routeScope,
+  lineCount,
   onRouteScopeChange,
+  onLineCountChange,
   onOpenStats,
   onOpenHelp,
   onNewRoute,
@@ -32,8 +43,6 @@ export function StationBanner({
 }: Props) {
   const origin = getStation(originId)
   const destination = getStation(destinationId)
-  const transferLabel =
-    transfers === 1 ? '1 transfer' : `${transfers} transfers`
   const areaLabel = isPractice ? ROUTE_SCOPE_LABEL[routeScope] : 'Manhattan'
 
   return (
@@ -81,24 +90,41 @@ export function StationBanner({
         </div>
       </div>
 
-      <div className="scope-toggle" role="group" aria-label="Route area">
-        <button
-          type="button"
-          className={`scope-chip${routeScope === 'manhattan' ? ' scope-chip--active' : ''}`}
-          onClick={() => onRouteScopeChange('manhattan')}
-          aria-pressed={routeScope === 'manhattan'}
-        >
-          Manhattan
-        </button>
-        <button
-          type="button"
-          className={`scope-chip${routeScope === 'all' ? ' scope-chip--active' : ''}`}
-          onClick={() => onRouteScopeChange('all')}
-          aria-pressed={routeScope === 'all'}
-          title="Practice routes across all boroughs"
-        >
-          All NYC
-        </button>
+      <div className="route-controls">
+        <div className="scope-toggle" role="group" aria-label="Route area">
+          <button
+            type="button"
+            className={`scope-chip${routeScope === 'manhattan' ? ' scope-chip--active' : ''}`}
+            onClick={() => onRouteScopeChange('manhattan')}
+            aria-pressed={routeScope === 'manhattan'}
+          >
+            Manhattan
+          </button>
+          <button
+            type="button"
+            className={`scope-chip${routeScope === 'all' ? ' scope-chip--active' : ''}`}
+            onClick={() => onRouteScopeChange('all')}
+            aria-pressed={routeScope === 'all'}
+            title="Practice routes across all boroughs"
+          >
+            All NYC
+          </button>
+        </div>
+
+        <div className="scope-toggle" role="group" aria-label="Number of trains">
+          {LINE_COUNT_OPTIONS.map((n) => (
+            <button
+              key={n}
+              type="button"
+              className={`scope-chip${lineCount === n ? ' scope-chip--active' : ''}`}
+              onClick={() => onLineCountChange(n)}
+              aria-pressed={lineCount === n}
+              title={n === 1 ? 'One train, no transfer' : `${n} trains`}
+            >
+              {lineCountLabel(n)}
+            </button>
+          ))}
+        </div>
       </div>
 
       <div className="trip-route">
@@ -117,7 +143,7 @@ export function StationBanner({
       <p className="trip-transfers">
         <span className="trip-transfers-rule" aria-hidden="true" />
         <span>
-          {transferLabel}
+          {transferText(transfers)}
           {' · '}
           {areaLabel}
           {isPractice ? ' · practice' : ' · daily'}

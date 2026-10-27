@@ -51,6 +51,8 @@ export type Settings = {
   darkMode: boolean
   /** Practice / New route area. Daily is always Manhattan. */
   routeScope: 'manhattan' | 'all'
+  /** Practice trains: 1 = direct, 2 or 3 with transfers. Daily is always 3. */
+  lineCount: 1 | 2 | 3
 }
 
 export type Stats = {

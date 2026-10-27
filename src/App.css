@@ -295,10 +295,17 @@
   color: #ffb4ae;
 }
 
+.route-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin: 0 0 0.55rem;
+}
+
 .scope-toggle {
   display: flex;
   gap: 0.3rem;
-  margin: 0 0 0.55rem;
+  margin: 0;
   padding: 0.18rem;
   border: 1px solid var(--stroke);
   border-radius: 999px;

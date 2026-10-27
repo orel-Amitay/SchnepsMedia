@@ -25,7 +25,16 @@ import {
   type LeaderboardEntry,
 } from './lib/leaderboard'
 import { type RouteScope } from './lib/boroughs'
-import { DAILY_ROUTE_SCOPE, getDailyPuzzle, getPracticePuzzle, isPracticePuzzle } from './lib/puzzle'
+import {
+  DAILY_LINE_COUNT,
+  DAILY_ROUTE_SCOPE,
+  getDailyPuzzle,
+  getPracticePuzzle,
+  isPracticePuzzle,
+  LINE_COUNT_OPTIONS,
+  lineCountLabel,
+  type LineCount,
+} from './lib/puzzle'
 import { loadSettings, saveSettings } from './lib/settings'
 import { loadStats, recordFinish } from './lib/stats'
 import { clearDay, loadDay, saveDay } from './lib/storage'
@@ -201,13 +210,18 @@ export default function App() {
     showToast(toastMsg)
   }
 
-  function newRoute() {
+  function startPractice(scope = settings.routeScope, lineCount = settings.lineCount, toastMsg?: string) {
     practiceNonce.current += 1
-    trackEvent('new_route', player, { scope: settings.routeScope })
+    trackEvent('new_route', player, { scope, lineCount })
     switchPuzzle(
-      getPracticePuzzle(Date.now() + practiceNonce.current, settings.routeScope),
-      settings.routeScope === 'manhattan' ? 'New Manhattan route' : 'New NYC route',
+      getPracticePuzzle(Date.now() + practiceNonce.current, scope, lineCount),
+      toastMsg ??
+        `${scope === 'manhattan' ? 'Manhattan' : 'NYC'} · ${lineCountLabel(lineCount)}`,
     )
+  }
+
+  function newRoute() {
+    startPractice()
   }
 
   function todaysRoute() {
@@ -218,13 +232,13 @@ export default function App() {
   function changeRouteScope(scope: RouteScope) {
     if (scope === settings.routeScope) return
     setSettings((s) => ({ ...s, routeScope: scope }))
-    // Switching area starts a fresh practice puzzle in that area.
-    practiceNonce.current += 1
-    trackEvent('new_route', player, { scope, reason: 'scope_change' })
-    switchPuzzle(
-      getPracticePuzzle(Date.now() + practiceNonce.current, scope),
-      scope === 'manhattan' ? 'Manhattan routes' : 'All NYC routes',
-    )
+    startPractice(scope, settings.lineCount, scope === 'manhattan' ? 'Manhattan routes' : 'All NYC routes')
+  }
+
+  function changeLineCount(lineCount: LineCount) {
+    if (lineCount === settings.lineCount) return
+    setSettings((s) => ({ ...s, lineCount }))
+    startPractice(settings.routeScope, lineCount, lineCountLabel(lineCount))
   }
 
   function onPick(line: LineId) {
@@ -452,7 +466,9 @@ export default function App() {
           streak={stats.currentStreak}
           isPractice={isPractice}
           routeScope={isPractice ? settings.routeScope : DAILY_ROUTE_SCOPE}
+          lineCount={isPractice ? settings.lineCount : DAILY_LINE_COUNT}
           onRouteScopeChange={changeRouteScope}
+          onLineCountChange={changeLineCount}
           onOpenStats={() => setStatsOpen(true)}
           onOpenHelp={() => setHelpOpen(true)}
           onNewRoute={newRoute}
@@ -501,8 +517,8 @@ export default function App() {
       <Modal open={helpOpen} title="How to Play" onClose={() => setHelpOpen(false)}>
         <p>Guess today’s TRANSFER in 6 tries.</p>
         <p>
-          The daily puzzle stays in <strong>Manhattan</strong>. Use New route for more trips, and switch
-          between Manhattan and All NYC anytime.
+          The daily puzzle is always <strong>Manhattan · 3 lines</strong>. For practice, pick Manhattan or
+          All NYC, and choose Direct, 2 lines, or 3 lines.
         </p>
         <p>
           Each guess must be a valid subway trip involving {length} train
@@ -752,7 +768,7 @@ export default function App() {
           />
         </label>
         <div className="setting-block">
-          <span className="setting-block-label">Practice routes</span>
+          <span className="setting-block-label">Practice area</span>
           <div className="scope-toggle scope-toggle--settings" role="group" aria-label="Practice route area">
             <button
               type="button"
@@ -771,8 +787,24 @@ export default function App() {
               All NYC
             </button>
           </div>
+          <span className="setting-block-label" style={{ marginTop: '0.75rem' }}>
+            Practice trains
+          </span>
+          <div className="scope-toggle scope-toggle--settings" role="group" aria-label="Practice line count">
+            {LINE_COUNT_OPTIONS.map((n) => (
+              <button
+                key={n}
+                type="button"
+                className={`scope-chip${settings.lineCount === n ? ' scope-chip--active' : ''}`}
+                onClick={() => setSettings((s) => ({ ...s, lineCount: n }))}
+                aria-pressed={settings.lineCount === n}
+              >
+                {lineCountLabel(n)}
+              </button>
+            ))}
+          </div>
           <p className="help-note" style={{ margin: '0.45rem 0 0' }}>
-            Today&apos;s daily puzzle is always Manhattan. This choice applies to New route / practice.
+            Daily is always Manhattan · 3 lines. These choices apply to New route / practice.
           </p>
         </div>
         <div className="settings-actions">
