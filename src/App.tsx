@@ -7,6 +7,7 @@ import { LineBadge } from './components/LineBadge'
 import { SponsorBar } from './components/SponsorBar'
 import { IconHelp, IconReset, IconSettings, IconStats, IconTrophy } from './components/Icons'
 import {
+  completeGoogleRedirect,
   firebaseConfigured,
   signInAsGuest,
   signInWithGoogle,
@@ -64,6 +65,18 @@ export default function App() {
   const practiceNonce = useRef(0)
 
   useEffect(() => watchAuth(setPlayer), [])
+
+  useEffect(() => {
+    void completeGoogleRedirect()
+      .then((p) => {
+        if (!p) return
+        setPlayer(p)
+        showToast(`Hi, ${p.displayName.split(' ')[0]}`)
+      })
+      .catch(() => {
+        // ignore redirect noise on cold load
+      })
+  }, [])
 
   useEffect(() => {
     const saved = loadDay(puzzle.dateKey)
@@ -124,9 +137,9 @@ export default function App() {
     return hints
   }, [guesses, statuses])
 
-  function showToast(msg: string) {
+  function showToast(msg: string, ms = 2200) {
     setToast(msg)
-    window.setTimeout(() => setToast(null), 1800)
+    window.setTimeout(() => setToast(null), Math.max(ms, msg.length > 40 ? 4500 : 2200))
   }
 
   function pulseShake() {
@@ -264,10 +277,14 @@ export default function App() {
       showToast(`Hi, ${p.displayName.split(' ')[0]}`)
     } catch (err) {
       const msg = err instanceof Error ? err.message : ''
+      if (msg === 'REDIRECTING') {
+        showToast('Redirecting to Google…')
+        return
+      }
       if (msg === 'GOOGLE_NOT_CONFIGURED') {
         showToast('Add Firebase keys for Google')
       } else {
-        showToast('Google sign-in failed')
+        showToast(msg || 'Google sign-in failed')
       }
     } finally {
       setAuthBusy(false)
