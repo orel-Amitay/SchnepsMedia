@@ -22,7 +22,7 @@ import {
 import { getDailyPuzzle } from './lib/puzzle'
 import { loadSettings, saveSettings } from './lib/settings'
 import { loadStats, recordFinish } from './lib/stats'
-import { loadDay, saveDay } from './lib/storage'
+import { clearDay, loadDay, saveDay } from './lib/storage'
 import { isValidTrip } from './lib/validate'
 import type { LineId, Settings, Stats, TileStatus } from './lib/types'
 import './App.css'
@@ -57,6 +57,7 @@ export default function App() {
   const [guestName, setGuestName] = useState('')
   const [authBusy, setAuthBusy] = useState(false)
   const [leaders, setLeaders] = useState<LeaderboardEntry[]>([])
+  const [answerPeek, setAnswerPeek] = useState(false)
 
   useEffect(() => watchAuth(setPlayer), [])
 
@@ -200,13 +201,21 @@ export default function App() {
     return () => window.removeEventListener('keydown', onKey)
   })
 
+  /** Peek at the solution without ending / locking the game. */
   function revealAnswer() {
-    if (gameStatus === 'playing') {
-      setStats(recordFinish({ dateKey: puzzle.dateKey, won: false, guesses: guesses.length }))
-      setGameStatus('lost')
-      setCurrent([])
-      void publishResult('lost', guesses.length, player)
-    }
+    setAnswerPeek(true)
+    showToast('Answer shown — you can keep playing')
+  }
+
+  function resetGame() {
+    clearDay(puzzle.dateKey)
+    setGuesses([])
+    setStatuses([])
+    setCurrent([])
+    setGameStatus('playing')
+    setAnswerPeek(false)
+    setRevealRow(null)
+    showToast('Board reset')
   }
 
   async function handleGoogle() {
@@ -320,14 +329,19 @@ export default function App() {
           transfers={transfers}
         />
 
-        {debug && (
+        {(debug || answerPeek) && (
           <div className="debug-answer" role="status">
-            <span className="debug-label">Debug answer</span>
+            <span className="debug-label">{answerPeek ? 'Answer' : 'Debug answer'}</span>
             <div className="result-solution">
               {puzzle.solution.map((line, i) => (
                 <LineBadge key={`dbg-${line}-${i}`} line={line} size="md" />
               ))}
             </div>
+            {answerPeek && gameStatus === 'playing' && (
+              <button type="button" className="peek-hide" onClick={() => setAnswerPeek(false)}>
+                Hide
+              </button>
+            )}
           </div>
         )}
 
@@ -510,6 +524,16 @@ export default function App() {
               <button type="button" className="share-btn" onClick={share}>
                 Share
               </button>
+              <button
+                type="button"
+                className="reveal-btn reveal-btn--modal"
+                onClick={() => {
+                  resetGame()
+                  setStatsOpen(false)
+                }}
+              >
+                Play again
+              </button>
               <button type="button" className="reveal-btn reveal-btn--modal" onClick={() => setBoardOpen(true)}>
                 Leaderboard
               </button>
@@ -552,19 +576,26 @@ export default function App() {
             onChange={(e) => setSettings((s) => ({ ...s, darkMode: e.target.checked }))}
           />
         </label>
-        {gameStatus === 'playing' && (
-          <button
-            type="button"
-            className="reveal-btn reveal-btn--modal"
-            onClick={() => {
-              revealAnswer()
-              setSettingsOpen(false)
-              setStatsOpen(true)
-            }}
-          >
-            Show answer
-          </button>
-        )}
+        <button
+          type="button"
+          className="reveal-btn reveal-btn--modal"
+          onClick={() => {
+            revealAnswer()
+            setSettingsOpen(false)
+          }}
+        >
+          Show answer
+        </button>
+        <button
+          type="button"
+          className="share-btn"
+          onClick={() => {
+            resetGame()
+            setSettingsOpen(false)
+          }}
+        >
+          Play again / reset board
+        </button>
       </Modal>
     </div>
   )

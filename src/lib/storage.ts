@@ -25,3 +25,11 @@ export function saveDay(state: DayState): void {
     // ignore quota / private mode
   }
 }
+
+export function clearDay(dateKey: string): void {
+  try {
+    localStorage.removeItem(PREFIX + dateKey)
+  } catch {
+    // ignore
+  }
+}

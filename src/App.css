@@ -634,6 +634,17 @@
   margin: 0;
 }
 
+.peek-hide {
+  margin-top: 0.35rem;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
 .reveal-btn {
   margin: 0.75rem 0 0;
   width: 100%;
