@@ -734,6 +734,11 @@
   font-size: 0.82rem !important;
 }
 
+.help-note a {
+  color: #ff8a84;
+  font-weight: 650;
+}
+
 .stats-row {
   display: grid;
   grid-template-columns: repeat(4, 1fr);

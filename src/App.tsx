@@ -496,6 +496,13 @@ export default function App() {
             to add them, then redeploy.
           </p>
         )}
+        <p className="help-note">
+          By signing in you agree to our{' '}
+          <a href="/privacy.html" target="_blank" rel="noopener noreferrer">
+            Privacy Policy
+          </a>
+          .
+        </p>
         <div className="guest-box">
           <label className="guest-label" htmlFor="guest-name">
             Or play as guest (this device only)
