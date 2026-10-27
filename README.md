@@ -27,6 +27,16 @@ npm run preview  # serve the production build
    - **Gray** — line is not in the solution
 4. Six guesses. Share your grid when finished.
 
+### How the answer is chosen
+
+The app does **not** store a fixed answer key. For the UTC date it:
+
+1. Seeds a PRNG with `subwaydle-nyc:YYYY-MM-DD`
+2. Samples station pairs on the MTA GTFS graph
+3. Runs a minimum-transfer pathfinder and takes that line sequence as today’s solution
+
+For QA, open the app with `?debug` in the URL to reveal today’s lines (e.g. `http://localhost:5288/?debug`).
+
 ## Data
 
 Station adjacency and line colors are derived from the public [MTA subway GTFS](https://rrgtfsfeeds.s3.amazonaws.com/gtfs_subway.zip) static feed (`src/data/graph.json`). Routes are computed client-side for a date-seeded daily puzzle.

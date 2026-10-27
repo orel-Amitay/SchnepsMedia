@@ -15,6 +15,10 @@ const MAX_GUESSES = 6
 export default function App() {
   const puzzle = useMemo(() => getDailyPuzzle(), [])
   const length = puzzle.solution.length
+  const debug = useMemo(() => {
+    if (typeof window === 'undefined') return false
+    return new URLSearchParams(window.location.search).has('debug')
+  }, [])
 
   const [guesses, setGuesses] = useState<LineId[][]>([])
   const [statuses, setStatuses] = useState<TileStatus[][]>([])
@@ -189,6 +193,18 @@ export default function App() {
           destinationId={puzzle.destinationId}
           dateKey={puzzle.dateKey}
         />
+
+        {debug && (
+          <div className="debug-answer" role="status">
+            <span className="debug-label">Debug answer</span>
+            <div className="result-solution">
+              {puzzle.solution.map((line, i) => (
+                <LineBadge key={`dbg-${line}-${i}`} line={line} size="md" />
+              ))}
+            </div>
+            <p className="debug-hint">Visible because URL has ?debug — remove it for normal play.</p>
+          </div>
+        )}
 
         <Board
           solutionLength={length}

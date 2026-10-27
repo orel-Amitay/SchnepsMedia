@@ -168,6 +168,34 @@
   font-size: 0.9rem;
 }
 
+.debug-answer {
+  border: 1px dashed rgba(245, 197, 24, 0.45);
+  background: rgba(245, 197, 24, 0.08);
+  border-radius: 14px;
+  padding: 0.75rem 0.9rem;
+  text-align: center;
+}
+
+.debug-label {
+  display: block;
+  font-size: 0.72rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #f5c518;
+  margin-bottom: 0.45rem;
+}
+
+.debug-hint {
+  margin: 0.35rem 0 0;
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+.debug-answer .result-solution {
+  justify-content: center;
+  margin: 0;
+}
+
 .board {
   display: flex;
   flex-direction: column;
