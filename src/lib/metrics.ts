@@ -1,6 +1,6 @@
 import { collection, getDocs, limit, orderBy, query } from 'firebase/firestore'
 import type { AnalyticsEvent } from './analytics'
-import { fetchRecentEvents } from './analytics'
+import { fetchRecentEvents, loadLocalEvents } from './analytics'
 import { getDb } from './firebase'
 import type { LeaderboardEntry } from './leaderboard'
 import { dateKeyUTC } from './rng'
@@ -8,6 +8,7 @@ import { dateKeyUTC } from './rng'
 export type MetricsSnapshot = {
   generatedAt: number
   todayKey: string
+  source: 'local' | 'mixed'
   totals: {
     events: number
     pageViews: number
@@ -41,7 +42,25 @@ function emptyDist() {
   return [0, 0, 0, 0, 0, 0]
 }
 
-function aggregate(events: AnalyticsEvent[], todayKey: string): Omit<MetricsSnapshot, 'generatedAt' | 'todayKey' | 'leaderboardToday' | 'recent'> {
+function withTimeout<T>(promise: Promise<T>, ms: number, fallback: T): Promise<T> {
+  return new Promise((resolve) => {
+    const timer = window.setTimeout(() => resolve(fallback), ms)
+    promise
+      .then((value) => {
+        window.clearTimeout(timer)
+        resolve(value)
+      })
+      .catch(() => {
+        window.clearTimeout(timer)
+        resolve(fallback)
+      })
+  })
+}
+
+function aggregate(
+  events: AnalyticsEvent[],
+  todayKey: string,
+): Omit<MetricsSnapshot, 'generatedAt' | 'todayKey' | 'leaderboardToday' | 'recent' | 'source'> {
   const totals = {
     events: events.length,
     pageViews: 0,
@@ -147,32 +166,48 @@ function aggregate(events: AnalyticsEvent[], todayKey: string): Omit<MetricsSnap
 async function fetchLeaderboardToday(todayKey: string): Promise<LeaderboardEntry[]> {
   const db = getDb()
   if (!db) return []
-  try {
-    const q = query(collection(db, 'leaderboard'), orderBy('updatedAt', 'desc'), limit(100))
-    const snap = await getDocs(q)
-    const rows: LeaderboardEntry[] = []
-    snap.forEach((d) => {
-      const e = d.data() as LeaderboardEntry
-      if (e.dateKey === todayKey) rows.push(e)
-    })
-    return rows.sort((a, b) => b.score - a.score).slice(0, 25)
-  } catch {
-    return []
-  }
+  return withTimeout(
+    (async () => {
+      const q = query(collection(db, 'leaderboard'), orderBy('updatedAt', 'desc'), limit(100))
+      const snap = await getDocs(q)
+      const rows: LeaderboardEntry[] = []
+      snap.forEach((d) => {
+        const e = d.data() as LeaderboardEntry
+        if (e.dateKey === todayKey) rows.push(e)
+      })
+      return rows.sort((a, b) => b.score - a.score).slice(0, 25)
+    })(),
+    2500,
+    [] as LeaderboardEntry[],
+  )
 }
 
-export async function loadMetricsSnapshot(): Promise<MetricsSnapshot> {
+function buildSnapshot(
+  events: AnalyticsEvent[],
+  leaderboardToday: LeaderboardEntry[],
+  source: 'local' | 'mixed',
+): MetricsSnapshot {
   const todayKey = dateKeyUTC(new Date())
-  const [events, leaderboardToday] = await Promise.all([
-    fetchRecentEvents(500),
-    fetchLeaderboardToday(todayKey),
-  ])
   const agg = aggregate(events, todayKey)
   return {
     generatedAt: Date.now(),
     todayKey,
+    source,
     ...agg,
     recent: events.slice(0, 40),
     leaderboardToday,
   }
+}
+
+/** Instant local snapshot so admin UI never hangs on Firestore. */
+export function loadLocalMetricsSnapshot(): MetricsSnapshot {
+  return buildSnapshot(loadLocalEvents(), [], 'local')
+}
+
+export async function loadMetricsSnapshot(): Promise<MetricsSnapshot> {
+  const [events, leaderboardToday] = await Promise.all([
+    fetchRecentEvents(500),
+    fetchLeaderboardToday(dateKeyUTC(new Date())),
+  ])
+  return buildSnapshot(events, leaderboardToday, 'mixed')
 }

@@ -29,6 +29,21 @@ export type AnalyticsEvent = {
 
 const LOCAL_KEY = 'transfer-nyc:analytics-buffer'
 
+function withTimeout<T>(promise: Promise<T>, ms: number, fallback: T): Promise<T> {
+  return new Promise((resolve) => {
+    const timer = window.setTimeout(() => resolve(fallback), ms)
+    promise
+      .then((value) => {
+        window.clearTimeout(timer)
+        resolve(value)
+      })
+      .catch(() => {
+        window.clearTimeout(timer)
+        resolve(fallback)
+      })
+  })
+}
+
 function bufferLocal(event: AnalyticsEvent) {
   try {
     const raw = localStorage.getItem(LOCAL_KEY)
@@ -83,15 +98,19 @@ export async function fetchRecentEvents(max = 400): Promise<AnalyticsEvent[]> {
 
   const db = getDb()
   if (db) {
-    try {
-      const q = query(collection(db, 'events'), orderBy('createdAt', 'desc'), limit(max))
-      const snap = await getDocs(q)
-      snap.forEach((d) => {
-        const e = d.data() as AnalyticsEvent
-        byKey.set(`${e.createdAt}_${e.type}_${e.uid ?? 'anon'}`, e)
-      })
-    } catch {
-      // missing index/rules
+    const cloud = await withTimeout(
+      (async () => {
+        const q = query(collection(db, 'events'), orderBy('createdAt', 'desc'), limit(max))
+        const snap = await getDocs(q)
+        const rows: AnalyticsEvent[] = []
+        snap.forEach((d) => rows.push(d.data() as AnalyticsEvent))
+        return rows
+      })(),
+      2500,
+      [] as AnalyticsEvent[],
+    )
+    for (const e of cloud) {
+      byKey.set(`${e.createdAt}_${e.type}_${e.uid ?? 'anon'}`, e)
     }
   }
 

@@ -6,7 +6,7 @@ import {
   watchAuth,
   type Player,
 } from '../lib/auth'
-import { loadMetricsSnapshot, type MetricsSnapshot } from '../lib/metrics'
+import { loadLocalMetricsSnapshot, loadMetricsSnapshot, type MetricsSnapshot } from '../lib/metrics'
 import './AdminMetrics.css'
 
 function Stat({ label, value }: { label: string; value: string | number }) {
@@ -34,12 +34,14 @@ export function AdminMetrics() {
   useEffect(() => watchAuth(setPlayer), [])
 
   async function refresh() {
+    // Show local data immediately so the page never sticks on Loading.
+    setSnap(loadLocalMetricsSnapshot())
     setLoading(true)
     setError(null)
     try {
       setSnap(await loadMetricsSnapshot())
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load metrics')
+      setError(err instanceof Error ? err.message : 'Failed to load cloud metrics')
     } finally {
       setLoading(false)
     }
@@ -121,7 +123,9 @@ export function AdminMetrics() {
         <>
           <div className="admin-toolbar">
             <span className="admin-muted">
-              {snap ? `Updated ${formatTime(snap.generatedAt)} · day ${snap.todayKey}` : 'Loading…'}
+              {snap
+                ? `Updated ${formatTime(snap.generatedAt)} · ${snap.todayKey} · ${snap.source}`
+                : 'Loading…'}
             </span>
             <button type="button" className="admin-btn" onClick={() => void refresh()} disabled={loading}>
               {loading ? 'Refreshing…' : 'Refresh'}
