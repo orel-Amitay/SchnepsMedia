@@ -1,35 +1,56 @@
 :root,
 :root[data-theme='dark'] {
-  --ink: #ffffff;
-  --muted: #818384;
-  --stroke: #3a3a3c;
-  --panel: #121213;
-  --modal: #1a1a1b;
-  --bg: #121213;
-  --tile-bg: #121213;
-  --correct: #538d4e;
-  --shared: #3b82f6;
-  --present: #b59f3b;
-  --absent: #3a3a3c;
-  --key-bg: #818384;
+  /* Schneps-leaning editorial dark: charcoal, paper ink, signal red */
+  --schneps-red: #e10600;
+  --schneps-red-soft: rgba(225, 6, 0, 0.16);
+  --ink: #f4f1ea;
+  --muted: #9a958c;
+  --stroke: rgba(244, 241, 234, 0.12);
+  --stroke-strong: rgba(244, 241, 234, 0.22);
+  --panel: #14161a;
+  --panel-elevated: #1c2026;
+  --modal: #1e232b;
+  --bg: #0e1013;
+  --tile-bg: #1a1e24;
+  --tile-empty: #252a32;
+  --correct: #3f8f5a;
+  --shared: #3d7dd6;
+  --present: #c4a035;
+  --absent: #3a404a;
+  --key-bg: #2a3038;
+  --key-action: #3a424e;
+  --from-bg: #2a1818;
+  --from-border: rgba(225, 6, 0, 0.55);
+  --to-bg: #172230;
+  --to-border: rgba(90, 150, 220, 0.45);
   --font-display: 'Archivo', 'Helvetica Neue', sans-serif;
   --font-body: 'IBM Plex Sans', 'Helvetica Neue', sans-serif;
   color-scheme: dark;
 }
 
 :root[data-theme='light'] {
-  --ink: #1a1a1b;
-  --muted: #787c7e;
-  --stroke: #d3d6da;
-  --panel: #ffffff;
+  --schneps-red: #d10600;
+  --schneps-red-soft: rgba(209, 6, 0, 0.1);
+  --ink: #1a1c20;
+  --muted: #6b7280;
+  --stroke: rgba(26, 28, 32, 0.12);
+  --stroke-strong: rgba(26, 28, 32, 0.2);
+  --panel: #f7f5f2;
+  --panel-elevated: #ffffff;
   --modal: #ffffff;
-  --bg: #ffffff;
+  --bg: #ebe7e1;
   --tile-bg: #ffffff;
-  --correct: #6aaa64;
-  --shared: #2563eb;
-  --present: #c9b458;
-  --absent: #787c7e;
-  --key-bg: #d3d6da;
+  --tile-empty: #e5e1db;
+  --correct: #4c8b5c;
+  --shared: #2f6fbf;
+  --present: #b8942a;
+  --absent: #9aa0a8;
+  --key-bg: #d9d4cd;
+  --key-action: #c4beb6;
+  --from-bg: #f8e8e6;
+  --from-border: rgba(209, 6, 0, 0.35);
+  --to-bg: #e7eef7;
+  --to-border: rgba(47, 111, 191, 0.35);
   color-scheme: light;
 }
 
