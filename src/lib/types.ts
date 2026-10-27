@@ -49,6 +49,8 @@ export type GuessResult = {
 export type Settings = {
   showStatusBadges: boolean
   darkMode: boolean
+  /** Practice / New route area. Daily is always Manhattan. */
+  routeScope: 'manhattan' | 'all'
 }
 
 export type Stats = {

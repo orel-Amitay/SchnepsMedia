@@ -1,3 +1,4 @@
+import { normalizeRouteScope } from './boroughs'
 import type { Settings } from './types'
 
 const KEY = 'transfer-nyc:settings'
@@ -5,13 +6,19 @@ const KEY = 'transfer-nyc:settings'
 const defaults: Settings = {
   showStatusBadges: true,
   darkMode: true,
+  routeScope: 'manhattan',
 }
 
 export function loadSettings(): Settings {
   try {
     const raw = localStorage.getItem(KEY)
     if (!raw) return { ...defaults }
-    return { ...defaults, ...(JSON.parse(raw) as Settings) }
+    const parsed = JSON.parse(raw) as Partial<Settings>
+    return {
+      ...defaults,
+      ...parsed,
+      routeScope: normalizeRouteScope(parsed.routeScope),
+    }
   } catch {
     return { ...defaults }
   }

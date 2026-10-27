@@ -1,3 +1,4 @@
+import { ROUTE_SCOPE_LABEL, type RouteScope } from '../lib/boroughs'
 import { getStation } from '../lib/graph'
 import type { StationId } from '../lib/types'
 import { IconFlame, IconHelp, IconShuffle } from './Icons'
@@ -8,6 +9,8 @@ type Props = {
   transfers: number
   streak: number
   isPractice: boolean
+  routeScope: RouteScope
+  onRouteScopeChange: (scope: RouteScope) => void
   onOpenStats: () => void
   onOpenHelp: () => void
   onNewRoute: () => void
@@ -20,6 +23,8 @@ export function StationBanner({
   transfers,
   streak,
   isPractice,
+  routeScope,
+  onRouteScopeChange,
   onOpenStats,
   onOpenHelp,
   onNewRoute,
@@ -29,6 +34,7 @@ export function StationBanner({
   const destination = getStation(destinationId)
   const transferLabel =
     transfers === 1 ? '1 transfer' : `${transfers} transfers`
+  const areaLabel = isPractice ? ROUTE_SCOPE_LABEL[routeScope] : 'Manhattan'
 
   return (
     <div className="trip-prompt" aria-label={isPractice ? 'Practice trip' : "Today's trip"}>
@@ -75,6 +81,26 @@ export function StationBanner({
         </div>
       </div>
 
+      <div className="scope-toggle" role="group" aria-label="Route area">
+        <button
+          type="button"
+          className={`scope-chip${routeScope === 'manhattan' ? ' scope-chip--active' : ''}`}
+          onClick={() => onRouteScopeChange('manhattan')}
+          aria-pressed={routeScope === 'manhattan'}
+        >
+          Manhattan
+        </button>
+        <button
+          type="button"
+          className={`scope-chip${routeScope === 'all' ? ' scope-chip--active' : ''}`}
+          onClick={() => onRouteScopeChange('all')}
+          aria-pressed={routeScope === 'all'}
+          title="Practice routes across all boroughs"
+        >
+          All NYC
+        </button>
+      </div>
+
       <div className="trip-route">
         <div className="trip-stop">
           <span className="trip-stop-label">From</span>
@@ -92,7 +118,9 @@ export function StationBanner({
         <span className="trip-transfers-rule" aria-hidden="true" />
         <span>
           {transferLabel}
-          {isPractice ? ' · practice' : ''}
+          {' · '}
+          {areaLabel}
+          {isPractice ? ' · practice' : ' · daily'}
         </span>
         <span className="trip-transfers-rule" aria-hidden="true" />
       </p>

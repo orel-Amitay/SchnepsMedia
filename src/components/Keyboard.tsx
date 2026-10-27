@@ -1,4 +1,5 @@
-import { getPlayableLines, getRoute } from '../lib/graph'
+import { getPlayableLinesForScope, type RouteScope } from '../lib/boroughs'
+import { getRoute } from '../lib/graph'
 import type { LineId, TileStatus } from '../lib/types'
 
 type Props = {
@@ -7,10 +8,18 @@ type Props = {
   onEnter: () => void
   keyHints: Record<string, TileStatus>
   disabled?: boolean
+  routeScope?: RouteScope
 }
 
-export function Keyboard({ onPick, onDelete, onEnter, keyHints, disabled }: Props) {
-  const lines = getPlayableLines()
+export function Keyboard({
+  onPick,
+  onDelete,
+  onEnter,
+  keyHints,
+  disabled,
+  routeScope = 'manhattan',
+}: Props) {
+  const lines = getPlayableLinesForScope(routeScope)
   const rows: LineId[][] = [
     lines.filter((l) => ['1', '2', '3', '4', '5', '6', '6X', '7', '7X'].includes(l)),
     lines.filter((l) => ['A', 'C', 'E', 'B', 'D', 'F', 'M'].includes(l)),

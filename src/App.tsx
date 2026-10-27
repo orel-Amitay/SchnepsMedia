@@ -24,7 +24,8 @@ import {
   submitScore,
   type LeaderboardEntry,
 } from './lib/leaderboard'
-import { getDailyPuzzle, getPracticePuzzle, isPracticePuzzle } from './lib/puzzle'
+import { type RouteScope } from './lib/boroughs'
+import { DAILY_ROUTE_SCOPE, getDailyPuzzle, getPracticePuzzle, isPracticePuzzle } from './lib/puzzle'
 import { loadSettings, saveSettings } from './lib/settings'
 import { loadStats, recordFinish } from './lib/stats'
 import { clearDay, loadDay, saveDay } from './lib/storage'
@@ -202,13 +203,28 @@ export default function App() {
 
   function newRoute() {
     practiceNonce.current += 1
-    trackEvent('new_route', player)
-    switchPuzzle(getPracticePuzzle(Date.now() + practiceNonce.current), 'New route')
+    trackEvent('new_route', player, { scope: settings.routeScope })
+    switchPuzzle(
+      getPracticePuzzle(Date.now() + practiceNonce.current, settings.routeScope),
+      settings.routeScope === 'manhattan' ? 'New Manhattan route' : 'New NYC route',
+    )
   }
 
   function todaysRoute() {
     trackEvent('today_route', player)
-    switchPuzzle(getDailyPuzzle(), "Today's route")
+    switchPuzzle(getDailyPuzzle(), "Today's Manhattan route")
+  }
+
+  function changeRouteScope(scope: RouteScope) {
+    if (scope === settings.routeScope) return
+    setSettings((s) => ({ ...s, routeScope: scope }))
+    // Switching area starts a fresh practice puzzle in that area.
+    practiceNonce.current += 1
+    trackEvent('new_route', player, { scope, reason: 'scope_change' })
+    switchPuzzle(
+      getPracticePuzzle(Date.now() + practiceNonce.current, scope),
+      scope === 'manhattan' ? 'Manhattan routes' : 'All NYC routes',
+    )
   }
 
   function onPick(line: LineId) {
@@ -435,6 +451,8 @@ export default function App() {
           transfers={transfers}
           streak={stats.currentStreak}
           isPractice={isPractice}
+          routeScope={isPractice ? settings.routeScope : DAILY_ROUTE_SCOPE}
+          onRouteScopeChange={changeRouteScope}
           onOpenStats={() => setStatsOpen(true)}
           onOpenHelp={() => setHelpOpen(true)}
           onNewRoute={newRoute}
@@ -474,6 +492,7 @@ export default function App() {
           onEnter={onEnter}
           keyHints={keyHints}
           disabled={gameStatus !== 'playing'}
+          routeScope={isPractice ? settings.routeScope : DAILY_ROUTE_SCOPE}
         />
       </main>
 
@@ -481,6 +500,10 @@ export default function App() {
 
       <Modal open={helpOpen} title="How to Play" onClose={() => setHelpOpen(false)}>
         <p>Guess today’s TRANSFER in 6 tries.</p>
+        <p>
+          The daily puzzle stays in <strong>Manhattan</strong>. Use New route for more trips, and switch
+          between Manhattan and All NYC anytime.
+        </p>
         <p>
           Each guess must be a valid subway trip involving {length} train
           {length === 1 ? '' : 's'} using available transfers between them.
@@ -728,6 +751,30 @@ export default function App() {
             onChange={(e) => setSettings((s) => ({ ...s, darkMode: e.target.checked }))}
           />
         </label>
+        <div className="setting-block">
+          <span className="setting-block-label">Practice routes</span>
+          <div className="scope-toggle scope-toggle--settings" role="group" aria-label="Practice route area">
+            <button
+              type="button"
+              className={`scope-chip${settings.routeScope === 'manhattan' ? ' scope-chip--active' : ''}`}
+              onClick={() => setSettings((s) => ({ ...s, routeScope: 'manhattan' }))}
+              aria-pressed={settings.routeScope === 'manhattan'}
+            >
+              Manhattan
+            </button>
+            <button
+              type="button"
+              className={`scope-chip${settings.routeScope === 'all' ? ' scope-chip--active' : ''}`}
+              onClick={() => setSettings((s) => ({ ...s, routeScope: 'all' }))}
+              aria-pressed={settings.routeScope === 'all'}
+            >
+              All NYC
+            </button>
+          </div>
+          <p className="help-note" style={{ margin: '0.45rem 0 0' }}>
+            Today&apos;s daily puzzle is always Manhattan. This choice applies to New route / practice.
+          </p>
+        </div>
         <div className="settings-actions">
           <button
             type="button"
