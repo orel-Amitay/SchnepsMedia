@@ -60,20 +60,31 @@
   gap: 0.3rem;
   max-width: 100%;
   border: 1px solid var(--stroke);
-  background: rgba(255, 255, 255, 0.04);
-  color: var(--ink);
+  background: #fff;
+  color: #1a1a1b;
   border-radius: 999px;
-  padding: 0.15rem 0.45rem 0.15rem 0.15rem;
+  padding: 0.18rem 0.5rem 0.18rem 0.18rem;
   cursor: pointer;
-  font-size: 0.72rem;
-  font-weight: 600;
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.auth-chip--signed-in {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--ink);
 }
 
 .auth-chip-text {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  max-width: 4.5rem;
+  max-width: 5.2rem;
+}
+
+.auth-chip .google-g {
+  width: 1.15rem;
+  height: 1.15rem;
+  font-size: 0.65rem;
 }
 
 .auth-avatar {
@@ -172,8 +183,8 @@
 }
 
 .tile {
-  /* Fill available board height — bigger circles, less dead space */
-  --tile: min(76px, 22vw, calc((100dvh - 13.5rem) / 6));
+  /* Slightly smaller than max fill — keeps room for chrome + keyboard */
+  --tile: min(62px, 17vw, calc((100dvh - 14.5rem) / 6));
   width: var(--tile);
   height: var(--tile);
   border: 2px solid var(--stroke);
@@ -186,9 +197,9 @@
 @supports (width: 1cqh) {
   .tile {
     --tile: min(
-      80px,
-      30cqw,
-      calc((100cqh - 1.75rem) / 6)
+      64px,
+      24cqw,
+      calc((100cqh - 1.5rem) / 6)
     );
   }
 }
@@ -256,11 +267,11 @@
 }
 
 .line-badge--lg {
-  --badge: min(2.45rem, calc(var(--tile, 64px) * 0.68));
+  --badge: min(2.15rem, calc(var(--tile, 58px) * 0.66));
   min-width: var(--badge);
   height: var(--badge);
-  padding: 0 0.3rem;
-  font-size: clamp(0.85rem, 3.2vw, 1.15rem);
+  padding: 0 0.28rem;
+  font-size: clamp(0.78rem, 3vw, 1.05rem);
 }
 
 .keyboard {

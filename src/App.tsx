@@ -276,18 +276,24 @@ export default function App() {
         <div className="topbar-left">
           <button
             type="button"
-            className="auth-chip"
+            className={`auth-chip${player ? ' auth-chip--signed-in' : ''}`}
             onClick={() => (player ? setSettingsOpen(true) : setAuthOpen(true))}
-            aria-label={player ? 'Account' : 'Sign in'}
+            aria-label={player ? 'Account' : 'Sign in with Google'}
           >
             {player?.photoURL ? (
               <img className="auth-avatar" src={player.photoURL} alt="" />
-            ) : (
+            ) : player ? (
               <span className="auth-avatar auth-avatar--placeholder">
-                {(player?.displayName ?? 'G')[0]?.toUpperCase()}
+                {player.displayName[0]?.toUpperCase()}
+              </span>
+            ) : (
+              <span className="google-g" aria-hidden="true">
+                G
               </span>
             )}
-            <span className="auth-chip-text">{player ? player.displayName.split(' ')[0] : 'Sign in'}</span>
+            <span className="auth-chip-text">
+              {player ? player.displayName.split(' ')[0] : 'Google'}
+            </span>
           </button>
         </div>
         <h1 className="brand-title">Subwaydle</h1>
@@ -393,23 +399,24 @@ export default function App() {
         <p className="help-note">Inspired by the Subwaydle concept — not affiliated with subwaydle.com or the MTA.</p>
       </Modal>
 
-      <Modal open={authOpen} title="Sign in" onClose={() => setAuthOpen(false)}>
-        <p>Sign in to climb today’s Schneps Media leaderboard.</p>
+      <Modal open={authOpen} title="Sign in with Google" onClose={() => setAuthOpen(false)}>
+        <p>Connect your Google account to join the Schneps Media daily leaderboard.</p>
         <button type="button" className="google-btn" onClick={handleGoogle} disabled={authBusy}>
           <span className="google-g" aria-hidden="true">
             G
           </span>
-          Continue with Google
+          {authBusy ? 'Connecting…' : 'Continue with Google'}
         </button>
         {!firebaseConfigured && (
           <p className="help-note">
-            Google Sign-In needs Firebase keys (`VITE_FIREBASE_*`). Until then you can play as a guest
-            below — scores stay on this device.
+            Google login is wired in the app but needs Firebase web keys on the host
+            (`VITE_FIREBASE_API_KEY`, `AUTH_DOMAIN`, `PROJECT_ID`, `APP_ID`, …). Ask the project owner
+            to add them, then redeploy.
           </p>
         )}
         <div className="guest-box">
           <label className="guest-label" htmlFor="guest-name">
-            Or continue as guest
+            Or play as guest (this device only)
           </label>
           <input
             id="guest-name"
