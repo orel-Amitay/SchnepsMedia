@@ -6,13 +6,14 @@ import { StationBanner } from './components/StationBanner'
 import { LineBadge } from './components/LineBadge'
 import { SponsorBar } from './components/SponsorBar'
 import { IconReset, IconSettings, IconStats, IconTrophy } from './components/Icons'
-import { isAdminEmail } from './lib/admin'
+import { isAdminPlayer } from './lib/admin'
 import { trackEvent } from './lib/analytics'
 import {
   completeGoogleRedirect,
   firebaseConfigured,
   signInAsGuest,
   signInWithGoogle,
+  signInWithPassword,
   signOutPlayer,
   watchAuth,
   type Player,
@@ -60,6 +61,7 @@ export default function App() {
   const [stats, setStats] = useState<Stats>(() => loadStats())
   const [player, setPlayer] = useState<Player | null>(null)
   const [guestName, setGuestName] = useState('')
+  const [password, setPassword] = useState('')
   const [authBusy, setAuthBusy] = useState(false)
   const [leaders, setLeaders] = useState<LeaderboardEntry[]>([])
   const [answerPeek, setAnswerPeek] = useState(false)
@@ -317,6 +319,19 @@ export default function App() {
     showToast(`Playing as ${p.displayName}`)
   }
 
+  function handlePassword() {
+    try {
+      const p = signInWithPassword(password, guestName || 'Schneps Admin')
+      setPlayer(p)
+      setAuthOpen(false)
+      setPassword('')
+      trackEvent('sign_in', p, { method: 'password' })
+      showToast(`Hi, ${p.displayName.split(' ')[0]}`)
+    } catch {
+      showToast('Wrong password')
+    }
+  }
+
   async function handleSignOut() {
     trackEvent('sign_out', player)
     await signOutPlayer()
@@ -363,7 +378,7 @@ export default function App() {
             type="button"
             className={`auth-chip${player ? ' auth-chip--signed-in' : ''}`}
             onClick={() => (player ? setSettingsOpen(true) : setAuthOpen(true))}
-            aria-label={player ? 'Account' : 'Sign in with Google'}
+            aria-label={player ? 'Account' : 'Sign in'}
           >
             {player?.photoURL ? (
               <img className="auth-avatar" src={player.photoURL} alt="" />
@@ -377,7 +392,7 @@ export default function App() {
               </span>
             )}
             <span className="auth-chip-text">
-              {player ? player.displayName.split(' ')[0] : 'Google'}
+              {player ? player.displayName.split(' ')[0] : 'Sign in'}
             </span>
           </button>
         </div>
@@ -501,21 +516,37 @@ export default function App() {
         <p className="help-note">A Schneps Media daily puzzle — not affiliated with the MTA or other subway games.</p>
       </Modal>
 
-      <Modal open={authOpen} title="Sign in with Google" onClose={() => setAuthOpen(false)}>
-        <p>Connect your Google account to join the Schneps Media daily leaderboard.</p>
-        <button type="button" className="google-btn" onClick={handleGoogle} disabled={authBusy}>
-          <span className="google-g" aria-hidden="true">
-            G
-          </span>
-          {authBusy ? 'Connecting…' : 'Continue with Google'}
+      <Modal open={authOpen} title="Sign in" onClose={() => setAuthOpen(false)}>
+        <p>Sign in with the shared password to save your name on this device and open admin tools.</p>
+        <label className="guest-label" htmlFor="login-password">
+          Password
+        </label>
+        <input
+          id="login-password"
+          className="guest-input"
+          type="password"
+          placeholder="Password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') handlePassword()
+          }}
+          autoComplete="current-password"
+        />
+        <label className="guest-label" htmlFor="guest-name">
+          Display name (optional)
+        </label>
+        <input
+          id="guest-name"
+          className="guest-input"
+          placeholder="Display name"
+          value={guestName}
+          onChange={(e) => setGuestName(e.target.value)}
+          maxLength={24}
+        />
+        <button type="button" className="share-btn" onClick={handlePassword}>
+          Sign in with password
         </button>
-        {!firebaseConfigured && (
-          <p className="help-note">
-            Google login is wired in the app but needs Firebase web keys on the host
-            (`VITE_FIREBASE_API_KEY`, `AUTH_DOMAIN`, `PROJECT_ID`, `APP_ID`, …). Ask the project owner
-            to add them, then redeploy.
-          </p>
-        )}
         <p className="help-note">
           By signing in you agree to our{' '}
           <a href="/privacy.html" target="_blank" rel="noopener noreferrer">
@@ -524,18 +555,16 @@ export default function App() {
           .
         </p>
         <div className="guest-box">
-          <label className="guest-label" htmlFor="guest-name">
-            Or play as guest (this device only)
-          </label>
-          <input
-            id="guest-name"
-            className="guest-input"
-            placeholder="Display name"
-            value={guestName}
-            onChange={(e) => setGuestName(e.target.value)}
-            maxLength={24}
-          />
-          <button type="button" className="share-btn" onClick={handleGuest}>
+          <button type="button" className="google-btn" onClick={handleGoogle} disabled={authBusy}>
+            <span className="google-g" aria-hidden="true">
+              G
+            </span>
+            {authBusy ? 'Connecting…' : 'Try Google instead'}
+          </button>
+          {!firebaseConfigured && (
+            <p className="help-note">Google is optional and may be unavailable on this host.</p>
+          )}
+          <button type="button" className="btn-ghost" onClick={handleGuest}>
             Continue as guest
           </button>
         </div>
@@ -651,7 +680,11 @@ export default function App() {
             <div>
               <strong>{player.displayName}</strong>
               <div className="help-note" style={{ margin: 0 }}>
-                {player.provider === 'google' ? 'Signed in with Google' : 'Guest player'}
+                {player.provider === 'google'
+                  ? 'Signed in with Google'
+                  : player.provider === 'password'
+                    ? 'Signed in with password'
+                    : 'Guest player'}
               </div>
             </div>
             <button type="button" className="btn-ghost btn-compact" onClick={handleSignOut}>
@@ -707,7 +740,7 @@ export default function App() {
           >
             Reset board
           </button>
-          {isAdminEmail(player?.email) && (
+          {isAdminPlayer(player) && (
             <a className="btn-ghost settings-admin-link" href="/admin">
               Admin metrics →
             </a>

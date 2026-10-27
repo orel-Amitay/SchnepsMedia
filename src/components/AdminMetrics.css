@@ -67,6 +67,18 @@
   margin-top: 0.75rem;
 }
 
+.admin-input {
+  display: block;
+  width: 100%;
+  margin: 0.75rem 0 0;
+  border: 1px solid var(--stroke);
+  background: transparent;
+  color: var(--ink);
+  border-radius: 10px;
+  padding: 0.65rem 0.75rem;
+  font: inherit;
+}
+
 .admin-card {
   background: var(--panel-elevated);
   border: 1px solid var(--stroke);

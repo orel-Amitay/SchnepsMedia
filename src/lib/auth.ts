@@ -13,24 +13,28 @@ export type Player = {
   displayName: string
   photoURL: string | null
   email: string | null
-  provider: 'google' | 'guest'
+  provider: 'google' | 'guest' | 'password'
 }
 
-const GUEST_KEY = 'transfer-nyc:guest-player'
+const SESSION_KEY = 'transfer-nyc:guest-player'
 
-function guestFromStorage(): Player | null {
+/** Shared app password (also set as VITE_LOGIN_PASSWORD on the host). */
+export const LOGIN_PASSWORD =
+  (import.meta.env.VITE_LOGIN_PASSWORD as string | undefined)?.trim() || 'TransferSchneps26'
+
+function sessionFromStorage(): Player | null {
   try {
-    const raw = localStorage.getItem(GUEST_KEY)
+    const raw = localStorage.getItem(SESSION_KEY)
     return raw ? (JSON.parse(raw) as Player) : null
   } catch {
     return null
   }
 }
 
-function saveGuest(player: Player | null) {
+function saveSession(player: Player | null) {
   try {
-    if (!player) localStorage.removeItem(GUEST_KEY)
-    else localStorage.setItem(GUEST_KEY, JSON.stringify(player))
+    if (!player) localStorage.removeItem(SESSION_KEY)
+    else localStorage.setItem(SESSION_KEY, JSON.stringify(player))
   } catch {
     // ignore
   }
@@ -49,15 +53,15 @@ function fromFirebaseUser(user: User): Player {
 export function watchAuth(onChange: (player: Player | null) => void): () => void {
   const auth = getFirebaseAuth()
   if (!auth) {
-    onChange(guestFromStorage())
+    onChange(sessionFromStorage())
     return () => {}
   }
   return onAuthStateChanged(auth, (user) => {
     if (user) {
-      saveGuest(null)
+      saveSession(null)
       onChange(fromFirebaseUser(user))
     } else {
-      onChange(guestFromStorage())
+      onChange(sessionFromStorage())
     }
   })
 }
@@ -114,6 +118,21 @@ export async function signInWithGoogle(): Promise<Player> {
   }
 }
 
+export function signInWithPassword(password: string, displayName = 'Schneps Admin'): Player {
+  if (password.trim() !== LOGIN_PASSWORD) {
+    throw new Error('WRONG_PASSWORD')
+  }
+  const player: Player = {
+    uid: `password-${hashName(LOGIN_PASSWORD)}`,
+    displayName: displayName.trim() || 'Schneps Admin',
+    photoURL: null,
+    email: 'password@transfer.local',
+    provider: 'password',
+  }
+  saveSession(player)
+  return player
+}
+
 /** Local fallback so the UI is playable before Firebase keys are added. */
 export function signInAsGuest(displayName: string): Player {
   const name = displayName.trim() || 'Guest Rider'
@@ -124,12 +143,12 @@ export function signInAsGuest(displayName: string): Player {
     email: null,
     provider: 'guest',
   }
-  saveGuest(player)
+  saveSession(player)
   return player
 }
 
 export async function signOutPlayer(): Promise<void> {
-  saveGuest(null)
+  saveSession(null)
   const auth = getFirebaseAuth()
   if (auth) await firebaseSignOut(auth)
 }

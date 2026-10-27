@@ -1,6 +1,11 @@
 import { useEffect, useState } from 'react'
-import { isAdminEmail } from '../lib/admin'
-import { signInWithGoogle, signOutPlayer, watchAuth, type Player } from '../lib/auth'
+import { isAdminPlayer } from '../lib/admin'
+import {
+  signInWithPassword,
+  signOutPlayer,
+  watchAuth,
+  type Player,
+} from '../lib/auth'
 import { loadMetricsSnapshot, type MetricsSnapshot } from '../lib/metrics'
 import './AdminMetrics.css'
 
@@ -19,12 +24,12 @@ function formatTime(ts: number) {
 
 export function AdminMetrics() {
   const [player, setPlayer] = useState<Player | null>(null)
-  const [busy, setBusy] = useState(false)
+  const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [snap, setSnap] = useState<MetricsSnapshot | null>(null)
   const [loading, setLoading] = useState(false)
 
-  const admin = isAdminEmail(player?.email)
+  const admin = isAdminPlayer(player)
 
   useEffect(() => watchAuth(setPlayer), [])
 
@@ -47,16 +52,14 @@ export function AdminMetrics() {
     return () => window.clearInterval(id)
   }, [admin])
 
-  async function handleGoogle() {
-    setBusy(true)
+  function handlePassword() {
     setError(null)
     try {
-      await signInWithGoogle()
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : ''
-      if (msg !== 'REDIRECTING') setError(msg || 'Sign-in failed')
-    } finally {
-      setBusy(false)
+      const p = signInWithPassword(password)
+      setPlayer(p)
+      setPassword('')
+    } catch {
+      setError('Wrong password')
     }
   }
 
@@ -82,9 +85,20 @@ export function AdminMetrics() {
       {!player && (
         <section className="admin-card">
           <h2>Admin sign-in</h2>
-          <p>Sign in with the admin Google account to view metrics.</p>
-          <button type="button" className="admin-btn admin-btn--primary" onClick={handleGoogle} disabled={busy}>
-            {busy ? 'Connecting…' : 'Continue with Google'}
+          <p>Enter the shared admin password to view metrics.</p>
+          <input
+            className="admin-input"
+            type="password"
+            placeholder="Password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') handlePassword()
+            }}
+            autoComplete="current-password"
+          />
+          <button type="button" className="admin-btn admin-btn--primary" onClick={handlePassword}>
+            Sign in
           </button>
           {error && <p className="admin-error">{error}</p>}
         </section>
